@@ -27,12 +27,37 @@ Policy DSL -> Parser -> AST -> Validator -> Compiler -> Deterministic Automaton
 |-------|---------|--------|
 | 0 | DSL grammar, lexer, parser, validator, compiler, executor, test suite | done |
 | 1 | Formal trace semantics; determinism and compilation-correctness theorems | done |
-| 2 | Verification on native Linux | done |
-| 3 | Rust port of the formal core | done |
-| 4 | eBPF/LSM event collection and enforcement | planned |
-| 5 | Policy-aware hash-chained evidence layer | planned |
-| 6 | Deterministic replay | planned |
-| 7 | Evaluation: security coverage, performance, scalability | planned |
+| 2 | Linux event-observation feasibility; verification on native Linux | done |
+| 3 | Rust port of the formal core, with cross-language conformance | done |
+| 4 | Synchronous enforcement feasibility; event identity and coverage | done |
+| 5 | eBPF/LSM adapter | planned |
+| 6 | Policy-aware hash-chained evidence layer | planned |
+| 7 | Deterministic replay | planned |
+| 8 | Evaluation: security coverage, performance, scalability | planned |
+
+Phases 2 and 4 are feasibility studies rather than implementation. Each was run before the
+work that depends on it, and each changed the specification: Phase 2 removed a construct the
+kernel cannot observe, and Phase 4 defined what the argument of an event denotes. Their
+findings are in [`docs/`](docs/) and their apparatus in [`feasibility/`](feasibility/).
+
+## Specification revisions
+
+| Tag | Change |
+|---|---|
+| [`v1.0-spec`](../../releases/tag/v1.0-spec) | alphabet frozen at `EXEC`, `WRITE`, `OPEN`, `DELETE` after Phase 2 removed `SPAWN` |
+| [`v1.1-spec`](../../releases/tag/v1.1-spec) | event identity defined: arguments are pathnames, not object identifiers |
+
+Both tags are retained. No theorem changed between them; v1.1 states what v1.0 left implicit.
+
+| Document | Contents |
+|---|---|
+| [`docs/formal-semantics.md`](docs/formal-semantics.md) | the normative specification, at v1.1 |
+| [`docs/phase2-findings.md`](docs/phase2-findings.md) | event observation on Linux; why `SPAWN` was removed |
+| [`docs/phase4-findings.md`](docs/phase4-findings.md) | synchronous enforcement; path-resolution constraints |
+| [`docs/phase4b-findings.md`](docs/phase4b-findings.md) | hook/event correspondence; a retracted Phase 4 conclusion |
+| [`docs/phase4c-findings.md`](docs/phase4c-findings.md) | why a pathname is not an object identifier |
+| [`docs/open-identity-analysis.md`](docs/open-identity-analysis.md) | the identity candidates, compared before the decision |
+| [`feasibility/METHODOLOGY.md`](feasibility/METHODOLOGY.md) | experimental rules, each adopted after a measurement error |
 
 ## Implementations
 
