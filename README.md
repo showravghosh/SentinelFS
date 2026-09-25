@@ -28,11 +28,32 @@ Policy DSL -> Parser -> AST -> Validator -> Compiler -> Deterministic Automaton
 | 0 | DSL grammar, lexer, parser, validator, compiler, executor, test suite | done |
 | 1 | Formal trace semantics; determinism and compilation-correctness theorems | done |
 | 2 | Verification on native Linux | done |
-| 3 | Rust port of the formal core | planned |
+| 3 | Rust port of the formal core | done |
 | 4 | eBPF/LSM event collection and enforcement | planned |
 | 5 | Policy-aware hash-chained evidence layer | planned |
 | 6 | Deterministic replay | planned |
 | 7 | Evaluation: security coverage, performance, scalability | planned |
+
+## Implementations
+
+| Implementation | Location | Role |
+|---|---|---|
+| Python | `sentinelfs/` | reference implementation; the executable statement of the specification |
+| Rust | `rust/` | port for the eventual kernel-adjacent enforcement path; conforms to the reference |
+
+The Rust port is a port, not a redesign: its modules mirror the reference file by file, and
+the language it accepts is the one frozen at the `v1.0-spec` tag. `conformance.py` runs the
+same policies and traces through both command-line interfaces and compares their output byte
+for byte, including diagnostics for malformed policies:
+
+```bash
+cd rust && cargo build --release && cd ..
+python3 conformance.py --traces 250
+```
+
+A divergence is treated as a defect in an implementation or an error in the specification,
+to be investigated and resolved by a deliberate revision — not by adjusting the semantics to
+whatever the implementation made convenient.
 
 ## Policy language (v1)
 

@@ -1,0 +1,24 @@
+[package]
+name = "sentinelfs"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Deterministic policy compiler and runtime enforcement core for Linux, conforming to SentinelFS DSL v1"
+license = "MIT"
+
+# No dependencies. The compiler and executor are the trusted core of a security
+# system; every crate admitted here would widen what has to be trusted, and
+# nothing in the v1 language requires more than the standard library.
+[dependencies]
+
+[lib]
+name = "sentinelfs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sentinelfs"
+path = "src/bin/sentinelfs.rs"
+
+[profile.release]
+panic = "abort"
+overflow-checks = true

@@ -18,3 +18,6 @@ session.log
 # See feasibility/README.md for the reproducibility chain.
 feasibility/out/
 feasibility/results/truth-*.json
+
+# Rust build artefacts and conformance scratch output.
+rust/target/

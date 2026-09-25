@@ -192,6 +192,37 @@ tracked_out = [l for l in r.stdout.splitlines() if "feasibility/out" in l]
 check("no raw trace files are staged or untracked-visible", not tracked_out,
       "; ".join(tracked_out))
 
+
+# --- Rust port conformance -------------------------------------------------------
+
+section("Rust port agrees with the reference")
+
+rust_dir = ROOT / "rust"
+if not rust_dir.exists():
+    print("  SKIP  rust/ not present")
+else:
+    lexer_rs = (rust_dir / "src" / "dsl" / "lexer.rs").read_text(encoding="utf-8")
+    ast_rs = (rust_dir / "src" / "dsl" / "ast.rs").read_text(encoding="utf-8")
+
+    rust_types = set(re.findall(r'\"(EXEC|WRITE|OPEN|DELETE|SPAWN)\" => Some\(EventType', ast_rs))
+    check("Rust admits the same event types", rust_types == impl_types,
+          f"Rust {sorted(rust_types)} vs Python {sorted(impl_types)}")
+
+    check("Rust does not admit SPAWN", "SPAWN" not in rust_types)
+
+    cargo = (rust_dir / "Cargo.toml").read_text(encoding="utf-8")
+    deps = cargo.split("[dependencies]")[1].split("[")[0].strip() if "[dependencies]" in cargo else ""
+    check("Rust crate has no dependencies", deps == "", f"found: {deps!r}")
+
+    rust_bin = rust_dir / "target" / "release" / "sentinelfs"
+    if rust_bin.exists():
+        r = subprocess.run([sys.executable, "conformance.py", "--traces", "25"],
+                           cwd=ROOT, capture_output=True, text=True)
+        check("cross-implementation conformance passes", r.returncode == 0,
+              r.stdout.strip().splitlines()[-1] if r.stdout else r.stderr[:200])
+    else:
+        print("  SKIP  release binary not built (cd rust && cargo build --release)")
+
 # --- Result ---------------------------------------------------------------------
 
 print()
