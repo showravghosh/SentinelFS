@@ -26,8 +26,8 @@ Policy DSL -> Parser -> AST -> Validator -> Compiler -> Deterministic Automaton
 | Phase | Content | Status |
 |-------|---------|--------|
 | 0 | DSL grammar, lexer, parser, validator, compiler, executor, test suite | done |
-| 1 | Formal trace semantics; determinism and compilation-correctness theorems | in progress |
-| 2 | Verification on native Linux | planned |
+| 1 | Formal trace semantics; determinism and compilation-correctness theorems | done |
+| 2 | Verification on native Linux | done |
 | 3 | Rust port of the formal core | planned |
 | 4 | eBPF/LSM event collection and enforcement | planned |
 | 5 | Policy-aware hash-chained evidence layer | planned |
@@ -55,6 +55,29 @@ Supported actions: `DENY`, `ALERT`, `ALLOW`.
 
 Constructs deliberately excluded from v1: `WHERE`, `TIMEOUT`, boolean connectives,
 unrestricted negation, quantification, and cross-process relational constraints.
+
+## Formal specification
+
+[`docs/formal-semantics.md`](docs/formal-semantics.md) is the normative reference for the
+core language. It defines the event alphabet, trace semantics, well-formedness conditions,
+the compilation function, and establishes:
+
+| Result | Statement |
+|--------|-----------|
+| Theorem 1 | The compiled transition function is total and single-valued; each policy and trace yield exactly one decision |
+| Lemma 1 | The state reached after a trace is determined by the longest matching pattern prefix |
+| Theorem 2 | Compilation correctness: a trace violates the policy if and only if the compiled automaton accepts it |
+| Theorem 3 | The violation state is absorbing, so halting on violation is sound |
+| Corollary 4 | A violating trace of a DENY or ALERT policy never yields ALLOW |
+| Proposition 1 | Conditional completeness, under the explicitly stated assumptions A1-A5 |
+
+Guarantees are conditional on the observation and trust assumptions stated in the
+document. SentinelFS does not claim to detect attacks in general, nor to remain sound if
+those assumptions fail.
+
+`tests/test_theorems.py` checks the implementation against each numbered result. These are
+conformance tests, not proofs: they detect divergence between the code and the
+specification, and they are reported as such.
 
 ## Semantics
 
