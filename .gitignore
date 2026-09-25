@@ -21,3 +21,10 @@ feasibility/results/truth-*.json
 
 # Rust build artefacts and conformance scratch output.
 rust/target/
+
+# Phase 4 build artefacts and raw traces. The compiled probes and loaders are
+# rebuilt by feasibility/phase4/scripts/build.sh; vmlinux.h is generated from the
+# running kernel's BTF; the observed traces record unrelated host activity and are
+# regenerable. Measurements are reported in docs/phase4*-findings.md.
+feasibility/phase4/out/
+feasibility/phase4/probes/vmlinux.h

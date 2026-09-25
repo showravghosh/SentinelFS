@@ -1,6 +1,15 @@
 # SentinelFS: Formal Semantics of the Core Policy Language (v1)
 
-**Status:** working specification for the v1 core language. This document defines the
+**Status:** working specification for the core language, at revision **v1.1**.
+
+**Revision history.** v1.0 was frozen at tag `v1.0-spec`. Revision v1.1 adds §1.4 (event
+identity), assumption A1c, Proposition 2, and the naming-evasion threat-model statement in
+§7. It does not change the alphabet, the grammar, the compilation function, or any of
+Theorems 1-3, Lemma 1 or the corollaries: those are statements about an automaton over
+$\Sigma$ and are indifferent to what the arguments denote. What changes is that the
+specification now says what the arguments denote, which v1.0 left implicit. The change was
+forced by measurement rather than by design preference; see
+[`phase4c-findings.md`](phase4c-findings.md). This document defines the
 syntax, the trace semantics, the compilation function, and states and proves the
 determinism and compilation-correctness theorems. It is the normative reference: the
 Python reference implementation and any future implementation (Rust, in-kernel) are
@@ -57,6 +66,92 @@ contiguously. By convention $\langle\rangle \sqsubseteq \tau$ for every $\tau$.
 Embedding, rather than factor (contiguous substring) containment, is the intended reading
 of the `THEN` operator: unrelated events occurring between the events named by a policy
 must not prevent the policy from applying.
+
+### 1.4 Event identity: arguments are pathnames, not objects
+
+*Added in revision v1.1. The v1.0 text left the notion of identity implicit, which the Phase 4
+experiments showed to be a gap rather than an omission: different hooks report different
+strings for the same operation, and no available notion names the object. See
+[`phase4-findings.md`](phase4-findings.md), [`phase4b-findings.md`](phase4b-findings.md),
+[`phase4c-findings.md`](phase4c-findings.md).*
+
+The argument $a$ of an event $(t, a)$ is a **pathname observed for the operation**. It is not
+an identifier for a filesystem object, and the language provides no way to name an object
+independently of a path to it.
+
+For each type, the pathname is defined as follows:
+
+| Event | $a$ denotes |
+|---|---|
+| $\texttt{EXEC}(p)$ | the pathname supplied as the argument to the execution interface, before resolution of symbolic links |
+| $\texttt{OPEN}(p)$ | the pathname to which the kernel resolved the opened file at the time of opening |
+| $\texttt{WRITE}(p)$ | see below: the pathname associated with the written descriptor, established from an observed opening, subject to A1b |
+| $\texttt{DELETE}(p)$ | the pathname of the directory entry removed |
+
+$\texttt{WRITE}$ requires the fuller statement, because it is the one type whose argument is
+not discovered at the moment the event occurs:
+
+> $\texttt{WRITE}(p)$ denotes a write operation on a filesystem descriptor whose associated
+> pathname $p$ was established from an observed file-opening event, subject to A1b.
+
+The descriptor carries no pathname of its own, and the hook at which a write is observed
+cannot resolve one (see [`phase4-findings.md`](phase4-findings.md) §3.2). A write through a
+descriptor whose opening was not observed — one inherited across `fork` from before the
+monitor attached, or referring to a non-filesystem object such as a pipe or socket —
+therefore produces no $\texttt{WRITE}(p)$ event for any $p$, rather than producing one with a
+guessed or empty argument.
+
+These notions are deliberately not uniform. $\texttt{EXEC}$ names the pathname the caller
+supplied because that value is available and is what a policy author writes; the remaining
+types name a resolved pathname because no unresolved pathname survives to the point at which
+those operations are observed. The consequence is stated in §1.4.2 rather than concealed by a
+uniform-sounding definition.
+
+#### 1.4.1 A pathname is not an object identifier
+
+> **Proposition 2 (Pathname is not object identity).** Neither implication holds:
+> $$\text{same object} \;\not\Rightarrow\; \text{same reported pathname}$$
+> $$\text{same reported pathname} \;\not\Rightarrow\; \text{same object}$$
+
+This is an empirical claim about Linux, not a theorem. Both directions were measured, with
+the inode serving as independent evidence of object identity
+([`phase4c-findings.md`](phase4c-findings.md) §1):
+
+- **Left to right fails.** One object (inode 1147) was reached under three pathnames that a
+  policy naming the original would not match: a second hard link, a bind mount, and the name
+  it was given by a rename.
+- **Right to left fails.** After the object was deleted and a new file created under the same
+  name, the pathname was unchanged while the object was different (inode 1147 became 1150).
+
+A hard link is the clearest case: a file with several links has no distinguished name, so
+there is nothing canonical for the kernel to report, and the reported pathname is whichever
+one the operation used.
+
+#### 1.4.2 What a policy therefore constrains
+
+A policy naming a pathname constrains operations that reach an object **by that pathname**.
+It does not constrain operations reaching the same object by another pathname, and it does
+not distinguish that object from a different object later given the same pathname.
+
+$\texttt{EXEC}$ is additionally weaker than the other three with respect to symbolic links,
+because it names the supplied pathname: execution through a symbolic link does not match a
+policy naming the link's target, whereas opening through a symbolic link does match a policy
+naming the target. This asymmetry is a consequence of which value each hook makes available.
+It is a difference of degree rather than of kind, since §1.4.1 establishes that none of the
+four types provides object identity.
+
+#### 1.4.3 Identity models not adopted
+
+| Model | Property | Why not adopted in v1 |
+|---|---|---|
+| Pathname as supplied | human-readable; can name a path that does not yet exist | not object-invariant; symbolic links evade |
+| Resolved pathname | removes symbolic-link ambiguity | still names a route; hard links, bind mounts, renames evade; replacement produces a false match |
+| Device and inode | identifies an object directly; resists every evasion measured | cannot name an object that does not yet exist; identity changes when an object is deleted and recreated, so the binding an attacker breaks trivially; not writable by a human |
+| Label carried on the object | identity independent of any pathname; expressible in policy text | requires a trusted labelling mechanism, a lifecycle for labels, and a different policy language; a larger design than v1 |
+
+Label-based identity is the principled answer to §1.4.1 and is recorded here as future work
+rather than omitted. Adopting it would change the policy language and the semantics of
+Definition 1, and would require its own feasibility phase.
 
 ---
 
@@ -351,6 +446,12 @@ and must be restated wherever system-level guarantees are claimed.
   attached, inherited across `fork`, or referring to non-filesystem objects such as pipes and
   sockets do not yield a $\texttt{WRITE}(p)$ event for any $p$; they fall outside $\Sigma$
   rather than being reported with an empty or guessed argument.
+- **A1c (Pathname observation).** *Added in revision v1.1.* The pathname carried by an event
+  is one pathname by which the operation reached its object, as defined per type in §1.4. It
+  is neither canonical nor unique: the same object may be reached under other pathnames that
+  produce no matching event, and the same pathname may at another time denote a different
+  object. Guarantees stated over pathnames are therefore guarantees about named routes, not
+  about objects.
 - **A2 (Order preservation).** Events are delivered to the evaluator in the order in which
   they occurred.
 - **A3 (State integrity).** The automaton state associated with a policy instance is not
@@ -360,7 +461,7 @@ and must be restated wherever system-level guarantees are claimed.
 - **A5 (Enforcement-path integrity).** The trusted components — the in-kernel observation
   hooks, the evaluator, and the enforcement actuator — are not compromised.
 
-> **Proposition 1 (Conditional completeness).** Under A1, A1b, A2–A5, if the events occurring
+> **Proposition 1 (Conditional completeness).** Under A1, A1b, A1c, A2–A5, if the events occurring
 > on the monitored host form a trace $\tau$ with $\tau \models P$, then the deployed system
 > reaches the violation state $q_n$ for $P$ and issues $D(P,\tau)$.
 
@@ -379,6 +480,24 @@ reorder them (A2), arrange for writes through descriptors the monitor never saw 
 assumptions are load-bearing and any evaluation must report how far the deployed system
 actually satisfies them.
 
+**Naming evasions are outside the threat model.** *Added in revision v1.1.* A1c admits a
+class of adversary explicitly rather than by implication. Each of the following reaches a
+protected object without producing an event that matches a policy naming it, and each was
+measured ([`phase4c-findings.md`](phase4c-findings.md) §1):
+
+| Evasion | Privilege required |
+|---|---|
+| create a hard link to the object and use it | none beyond write access to some directory |
+| create a symbolic link and execute through it (`EXEC` only, §1.4.2) | none |
+| access the object through a bind mount | root, or an unprivileged user namespace where permitted |
+| rename the protected object, then operate on it | write access to the containing directory |
+| operate from a different mount namespace | ability to create one |
+
+Conversely, deleting a protected object and creating a different object under the same
+pathname causes a policy to continue matching, now applying to an object it was not written
+for. An adversary able to do any of these is outside the threat model; a deployment that
+cannot exclude them should not rely on pathname-based policies for the objects concerned.
+
 **Empirical status.** A1 and A2 are empirical claims about a deployment, not theorems. The
 Phase 2 feasibility study provides supporting evidence for both under the conditions it
 tested: 4,514 of 4,516 required events observed with no losses and no ordering inversions,
@@ -391,6 +510,19 @@ study.
 ---
 
 ## 8. Scope, limitations, and asymmetry of ALLOW
+
+**Pathname-oriented, not object-oriented.** *Added in revision v1.1.* The language describes
+operations on named routes, and §1.4 establishes that it cannot describe operations on
+objects. A policy cannot say "this file, however it is reached"; it can only say "this
+pathname". Every expressiveness statement below should be read subject to that, and the
+security claim the system supports is correspondingly:
+
+> SentinelFS enforces policies over observed pathname-based event traces, under the stated
+> observation and enforcement assumptions and the documented pathname-identity limitations.
+
+and not:
+
+> SentinelFS protects a filesystem object regardless of how that object is reached.
 
 **Expressiveness.** The v1 language expresses exactly the properties of the form
 "this finite sequence of concrete events occurs, in order, possibly with other events
@@ -469,4 +601,5 @@ rather than by verification, and it should be described that way.
 | Theorem 3 | $q_n$ is absorbing |
 | Corollary 3.1 | Halting at $q_n$ is sound |
 | Corollary 4 | A violation of a `DENY`/`ALERT` policy never yields `ALLOW` |
-| Proposition 1 | Conditional completeness, under assumptions A1, A1b, A2–A5 only |
+| Proposition 1 | Conditional completeness, under assumptions A1, A1b, A1c, A2–A5 only |
+| Proposition 2 | A pathname is not an object identifier, in either direction (empirical) |
