@@ -183,6 +183,64 @@ administrator needs to know when one policy silently disables another.
 
 ---
 
+### 3.5 A consequence for reading (b) under the current semantics
+
+Reading (b) is not merely a different assignment of meaning to a keyword. Under the semantics
+as they currently stand, one formulation of it has a consequence severe enough to record
+before any decision is taken.
+
+**Premise 1 — the violated set is monotone.** Definition 1 gives $\tau \models P$ iff
+$\sigma \sqsubseteq \tau$, and §1.3 defines embedding by the existence of indices
+$j_1 < \cdots < j_n$ with $f_{j_k} = e_k$. Extending the trace on the right leaves those
+indices valid, so $\sigma \sqsubseteq \tau$ implies $\sigma \sqsubseteq \tau\rho$ for every
+$\rho$. Hence
+
+$$W(\tau) \subseteq W(\tau\rho).$$
+
+A policy that has entered the violated set never leaves it. Theorem 3 is the automaton-level
+counterpart of the same fact: $q_n$ is absorbing, and it is stated over the automaton without
+reference to the policy's action, so it applies to an `ALLOW`-action policy exactly as to a
+`DENY` one.
+
+**Premise 2 — the override formulation of §3, F3.**
+
+$$\mathrm{verdict}(W) = \texttt{REFUSE} \iff (\exists\, i \in W: \alpha(i)=\texttt{DENY}) \;\wedge\; (\nexists\, j \in W: \alpha(j)=\texttt{ALLOW})$$
+
+**Derivation.** Suppose some `ALLOW`-action policy $P_j$ is violated at $\tau$, so
+$j \in W(\tau)$. By Premise 1, $j \in W(\tau\rho)$ for every subsequent $\rho$. The conjunct
+$\nexists\, j \in W: \alpha(j)=\texttt{ALLOW}$ is therefore false at $\tau$ and at every
+extension of it. By Premise 2 the verdict is $\texttt{PERMIT}$ at $\tau$ and at every
+extension, whatever any `DENY` policy does.
+
+**A single matching event on one `ALLOW`-action policy permanently suppresses denial for every
+`DENY` policy, host-wide, for the remaining lifetime of the policy set.**
+
+#### What this does and does not establish
+
+It establishes: *an override semantics that treats membership in the violated set as a
+persistent host-wide permission override inherits this consequence under the current monotone
+trace semantics and absorbing violation states.*
+
+It does **not** establish that every conceivable override semantics must behave this way. A
+future language could define an override together with scope, reset, or state-persistence
+behaviour that does not have this property — for instance by giving `ALLOW` policies
+non-absorbing states, by bounding an override to a window, or by scoping it to something
+narrower than the host. Each of those is a change to the semantics, not a different reading of
+the current ones.
+
+#### The specification finding
+
+> Choosing (b) is not merely assigning a meaning to `ALLOW`; under the current semantics it
+> requires coordinated changes to state persistence, scope, and/or reset behaviour.
+
+Each of those three is already recorded as a deferred construct in §8 of the specification,
+deferred for reasons independent of this question. Reading (b) is therefore unavailable in
+v1.x without at least one of them, and the three interact: a scoped override needs a notion of
+scope the language does not have, and a bounded one needs the reset that Theorem 3 currently
+excludes.
+
+This is an input to the decision of §6, not the decision itself.
+
 ## 4. Comparison
 
 | | F1 total order | F2 powerset join | F3 override |
