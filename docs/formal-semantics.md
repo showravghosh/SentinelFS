@@ -1,19 +1,23 @@
 # SentinelFS: Formal Semantics of the Core Policy Language (v1)
 
-**Status:** working specification for the core language, at revision **v1.1**.
+**Status:** working specification for the core language, at revision **v1.2**.
 
-**Revision history.** v1.0 was frozen at tag `v1.0-spec`. Revision v1.1 adds §1.4 (event
-identity), assumption A1c, Proposition 2, and the naming-evasion threat-model statement in
-§7. It does not change the alphabet, the grammar, the compilation function, or any of
-Theorems 1-3, Lemma 1 or the corollaries: those are statements about an automaton over
-$\Sigma$ and are indifferent to what the arguments denote. What changes is that the
-specification now says what the arguments denote, which v1.0 left implicit. The change was
-forced by measurement rather than by design preference; see
-[`phase4c-findings.md`](phase4c-findings.md). This document defines the
-syntax, the trace semantics, the compilation function, and states and proves the
-determinism and compilation-correctness theorems. It is the normative reference: the
-Python reference implementation and any future implementation (Rust, in-kernel) are
-correct exactly insofar as they agree with this document.
+**Revision history.** No revision has changed the alphabet, the grammar, the compilation
+function, or any of Theorems 1–3, Lemma 1 or the corollaries. Those are statements about an
+automaton over $\Sigma$ and are indifferent to what its arguments denote or how a trace is
+scoped. What the revisions change is what the specification *says*, where v1.0 left something
+implicit that an implementation would otherwise have to decide for itself.
+
+| Revision | Tag | Change |
+|---|---|---|
+| v1.0 | `v1.0-spec` | alphabet frozen after the Phase 2 study removed `SPAWN` |
+| v1.1 | `v1.1-spec` | §1.4 event identity; assumption A1c; Proposition 2; the naming-evasion threat model in §7. Forced by measurement: different hooks report different strings for the same operation, and none names the object. See [`phase4c-findings.md`](phase4c-findings.md) |
+| v1.2 | this revision | two statements in §8: the host-wide trace of §1.2 permits a pattern to be satisfied across unrelated processes, and no reset or expiry construct exists. Both were already consequences of v1.1; each is a point at which an implementation could narrow or widen the semantics while appearing to implement them. See [`phase5a-state-analysis.md`](phase5a-state-analysis.md) |
+
+This document defines the syntax, the trace semantics, the compilation function, and states
+and proves the determinism and compilation-correctness theorems. It is the normative
+reference: the Python reference implementation and any future implementation (Rust,
+in-kernel) are correct exactly insofar as they agree with it.
 
 ---
 
@@ -554,11 +558,60 @@ is deterministic as well. Defining a combination operator on decisions — and w
 conflict analysis sketched in the project roadmap — requires a decision lattice and is
 deferred to a later version of this specification.
 
-**Deferred constructs.** `WHERE` (argument predicates) and `TIMEOUT` (bounded temporal
-windows) are named in the project roadmap but are deliberately absent from v1. `TIMEOUT` in
-particular moves the language beyond the regular fragment unless the time bound is
-discretised into event counts; the choice of formulation will determine whether Theorem 2
-generalises, and it should not be adopted before that is settled.
+**Trace scope is the host, and patterns may match across processes.** *Added in revision
+v1.2.* The trace of §1.2 is host-wide. It follows that there is one automaton instance per
+policy, that events from any process advance it, and therefore that **a policy pattern may be
+satisfied by events originating in unrelated processes**.
+
+This is a consequence of Definition 1, not a defect in it, but it is easily missed. A policy
+of the form
+
+```
+ON EXEC(a) THEN EXEC(b) THEN WRITE(c) DENY
+```
+
+reads naturally as a causal claim — that one process executed $a$, then $b$, then wrote to
+$c$. The language cannot express that claim. What the policy means is that the events occurred
+on the host in that order, by any processes whatever, with arbitrary unrelated activity
+between them.
+
+The consequence was measured rather than argued: a pattern naming three routinely occurring
+executions was satisfied by three unrelated processes in a recorded host trace, driving the
+automaton to its violation state. See
+[`phase5a-state-analysis.md`](phase5a-state-analysis.md) §1.1.
+
+Combined with Theorem 3, which makes the violation state absorbing, a policy naming events
+that each occur in ordinary operation will reach its violation state during ordinary
+operation, and remain there.
+
+**An implementation must not narrow this.** Keying automaton state by process, by process
+tree, or by any other unit smaller than the host produces a system that is narrower than this
+specification while appearing to implement it: Theorem 2 would still hold of the compiler, and
+the deployed system would still not decide what the specification says it decides. Scoping a
+pattern to a process or a lineage is a language extension, recorded in the table below.
+
+**There is no reset, and no window.** *Added in revision v1.2.* Theorem 3 establishes that
+$q_n$ is absorbing, and the language provides no construct by which an instance returns to
+$q_0$, expires, or restricts a pattern to a bounded interval. An instance that reaches its
+violation state remains there for as long as it exists.
+
+**An implementation must not add one.** Introducing expiry, a timeout, or a reset changes
+which traces violate a policy, and is therefore a change to Definition 1 rather than an
+implementation detail — including when the motivation is to bound memory. If a deployment
+requires bounded state and the semantics do not permit it, that is a conflict to be resolved
+by revising the semantics deliberately, not by an adapter quietly discarding state the
+specification says is retained.
+
+**Deferred constructs.** The following are named in the project roadmap or arise from the
+findings above. None is part of the language, and each would require its own revision.
+
+| Construct | Effect | Why deferred |
+|---|---|---|
+| `WHERE` | argument predicates | not yet formulated |
+| `TIMEOUT` | bounded temporal windows | moves the language beyond the regular fragment unless the bound is discretised into event counts; whether Theorem 2 generalises depends on the formulation |
+| pattern scoping | restrict a pattern to a process or a lineage | addresses the cross-process consequence above; requires a notion of process identity in the semantics, which §1.4 currently confines to evidence |
+| reset or expiry | return an instance to $q_0$ | changes which traces violate a policy; interacts with Theorem 3 |
+| decision combination | a lattice over the decisions of several policies | required before conflict analysis is meaningful |
 
 ---
 
