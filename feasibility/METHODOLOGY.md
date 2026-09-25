@@ -124,6 +124,30 @@ and not:
 
 The second attributes a counterfactual the record does not contain.
 
+### Vocabulary
+
+M7 is only enforceable if the words carry fixed meanings. These are the ones this project
+uses, and a claim should be readable as exactly one of them.
+
+| Term | Means | Typical source |
+|---|---|---|
+| **defined** | the specification gives the semantics | `formal-semantics.md` |
+| **proved** | a formal argument establishes the property | Theorems 1–3, Lemma 1, the corollaries |
+| **measured** | an experiment provides empirical evidence | the findings documents |
+| **exposed** | the development process revealed a gap | revision history, retractions |
+| **supported** | true within a stated scope and set of assumptions | anything resting on A1–A5, or on one kernel |
+
+The distinctions that matter most in practice:
+
+- A property may be **defined** without being **proved**, and **proved** without being
+  **measured** in any deployment.
+- **Measured** never upgrades to **proved**. The differential tests corroborate Theorem 2;
+  they do not establish it.
+- **Supported** is not **proved** with caveats — it is a weaker claim about a bounded set of
+  observations, and it stops being true outside that scope.
+- **Exposed** describes what happened in this project. It carries no claim about what would
+  have happened otherwise, which is the whole content of M7.
+
 The gaps themselves are stated in the findings documents and each is independently checkable:
 `SPAWN` was not faithfully observable ([`../docs/phase2-findings.md`](../docs/phase2-findings.md) §4.1);
 a pathname is not an object identifier ([`../docs/phase4c-findings.md`](../docs/phase4c-findings.md) §1);
