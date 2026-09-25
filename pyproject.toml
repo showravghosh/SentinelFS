@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinelfs"
+version = "0.1.0"
+description = "A deterministic, formally specified policy compiler and runtime enforcement framework for Linux"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[project.scripts]
+sentinelfs = "sentinelfs.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["sentinelfs*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

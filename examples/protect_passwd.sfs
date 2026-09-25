@@ -1,0 +1,6 @@
+POLICY protect_passwd
+VERSION 1
+
+ON EXEC("/bin/bash")
+THEN WRITE("/etc/passwd")
+DENY

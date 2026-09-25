@@ -1,0 +1,5 @@
+POLICY monitor_sensitive_file
+VERSION 1
+
+ON OPEN("/etc/shadow")
+ALERT
