@@ -1,0 +1,10 @@
+# Normalise line endings in the repository to LF.
+#
+# Several files were committed with CRLF after being edited through a Windows
+# host, which made one revision's diff show every line as changed. This keeps
+# what is stored in git independent of the editing platform.
+* text=auto eol=lf
+
+# Binary and generated content is left alone.
+*.png binary
+*.o binary
