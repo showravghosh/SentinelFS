@@ -1,0 +1,162 @@
+{
+  "study": "SentinelFS Phase 2 - Linux event-observation feasibility",
+  "regenerate_with": "sudo ./run_feasibility.sh && python3 analyse.py --json results/summary.json",
+  "contains": "aggregate measurements only; no process names, paths, or process identifiers",
+  "environment": {
+    "kernel": "7.0.12+kali-amd64",
+    "arch": "x86_64",
+    "bpftrace": "bpftrace v0.26.0"
+  },
+  "alphabet_tested": [
+    "EXEC",
+    "SPAWN",
+    "OPEN",
+    "WRITE"
+  ],
+  "frozen_v1_alphabet": [
+    "EXEC",
+    "WRITE",
+    "OPEN",
+    "DELETE"
+  ],
+  "alphabet_note": "This file records the alphabet the EXPERIMENT used, which is not the frozen v1 alphabet. SPAWN was included in the feasibility experiment because the initial specification included it. The experiment established that the required SPAWN observation was not available under the original event definition: at fork time the kernel cannot name the binary a child will later execute. That negative result led to its removal from DSL v1. The two unmatched events in 'totals' are that construct, not lost events. See docs/phase2-findings.md section 4.1.",
+  "totals": {
+    "ground_truth_events": 4516,
+    "matched_events": 4514,
+    "coverage": 0.999557,
+    "ordering_inversions": 0
+  },
+  "assumption_support": {
+    "A1": {
+      "claim": "observation completeness",
+      "status": "empirically supported under the tested conditions",
+      "evidence": "4514/4516 required events observed",
+      "caveat": "the unmatched events are attributable to the SPAWN semantic definition, not to event loss; this is support, not proof"
+    },
+    "A2": {
+      "claim": "order preservation",
+      "status": "empirically supported across all tested scenarios",
+      "evidence": "0 ordering inversions",
+      "caveat": "scenarios tested only; not a general guarantee"
+    }
+  },
+  "end_to_end_policy_detection": true,
+  "scenarios": {
+    "attack_chain": {
+      "ground_truth_events": 6,
+      "matched_events": 5,
+      "coverage": 0.833333,
+      "ordering_inversions": 0,
+      "process_identity_exact": 5,
+      "argument_exact": 4,
+      "per_type": {
+        "EXEC": {
+          "expected": 2,
+          "matched": 2
+        },
+        "OPEN": {
+          "expected": 1,
+          "matched": 1
+        },
+        "SPAWN": {
+          "expected": 2,
+          "matched": 1
+        },
+        "WRITE": {
+          "expected": 1,
+          "matched": 1
+        }
+      },
+      "unmatched_by_type": {
+        "SPAWN": 1
+      },
+      "workload_duration_s": 0.03846,
+      "workload_rate_events_per_s": 156.0,
+      "host_events_during_run": 491,
+      "host_rate_events_per_s": 148.4,
+      "write_path_unresolved_fraction": 0.9394
+    },
+    "interleaved": {
+      "ground_truth_events": 10,
+      "matched_events": 9,
+      "coverage": 0.9,
+      "ordering_inversions": 0,
+      "process_identity_exact": 9,
+      "argument_exact": 8,
+      "per_type": {
+        "EXEC": {
+          "expected": 2,
+          "matched": 2
+        },
+        "OPEN": {
+          "expected": 4,
+          "matched": 4
+        },
+        "SPAWN": {
+          "expected": 2,
+          "matched": 1
+        },
+        "WRITE": {
+          "expected": 2,
+          "matched": 2
+        }
+      },
+      "unmatched_by_type": {
+        "SPAWN": 1
+      },
+      "workload_duration_s": 0.039496,
+      "workload_rate_events_per_s": 253.2,
+      "host_events_during_run": 604,
+      "host_rate_events_per_s": 190.8,
+      "write_path_unresolved_fraction": 0.9565
+    },
+    "ordering": {
+      "ground_truth_events": 500,
+      "matched_events": 500,
+      "coverage": 1.0,
+      "ordering_inversions": 0,
+      "process_identity_exact": 500,
+      "argument_exact": 500,
+      "per_type": {
+        "OPEN": {
+          "expected": 300,
+          "matched": 300
+        },
+        "WRITE": {
+          "expected": 200,
+          "matched": 200
+        }
+      },
+      "unmatched_by_type": {},
+      "workload_duration_s": 0.057817,
+      "workload_rate_events_per_s": 8647.9,
+      "host_events_during_run": 989,
+      "host_rate_events_per_s": 295.3,
+      "write_path_unresolved_fraction": 0.258
+    },
+    "volume": {
+      "ground_truth_events": 4000,
+      "matched_events": 4000,
+      "coverage": 1.0,
+      "ordering_inversions": 0,
+      "process_identity_exact": 4000,
+      "argument_exact": 4000,
+      "per_type": {
+        "OPEN": {
+          "expected": 2000,
+          "matched": 2000
+        },
+        "WRITE": {
+          "expected": 2000,
+          "matched": 2000
+        }
+      },
+      "unmatched_by_type": {},
+      "workload_duration_s": 0.05418,
+      "workload_rate_events_per_s": 73828.5,
+      "host_events_during_run": 4566,
+      "host_rate_events_per_s": 1354.6,
+      "write_path_unresolved_fraction": 0.0443
+    }
+  }
+}

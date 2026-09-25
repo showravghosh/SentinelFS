@@ -3,7 +3,7 @@
 Usage:
     python -m sentinelfs.cli compile examples/protect_shadow.sfs
     python -m sentinelfs.cli run examples/protect_shadow.sfs \
-        --trace 'EXEC("/usr/bin/python3")' 'SPAWN("/bin/bash")' 'WRITE("/etc/shadow")'
+        --trace 'EXEC("/usr/bin/python3")' 'EXEC("/bin/bash")' 'WRITE("/etc/shadow")'
 """
 
 from __future__ import annotations

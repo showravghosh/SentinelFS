@@ -6,7 +6,7 @@ SHADOW = '''POLICY protect_shadow
 VERSION 1
 
 ON EXEC("/usr/bin/python3")
-THEN SPAWN("/bin/bash")
+THEN EXEC("/bin/bash")
 THEN WRITE("/etc/shadow")
 DENY
 '''
@@ -19,7 +19,7 @@ def test_compiles_to_expected_states_and_transitions():
     assert automaton.action == "DENY"
     assert [t.event for t in automaton.transitions] == [
         Event("EXEC", "/usr/bin/python3"),
-        Event("SPAWN", "/bin/bash"),
+        Event("EXEC", "/bin/bash"),
         Event("WRITE", "/etc/shadow"),
     ]
 

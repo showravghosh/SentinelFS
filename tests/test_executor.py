@@ -9,7 +9,7 @@ SHADOW = '''POLICY protect_shadow
 VERSION 1
 
 ON EXEC("/usr/bin/python3")
-THEN SPAWN("/bin/bash")
+THEN EXEC("/bin/bash")
 THEN WRITE("/etc/shadow")
 DENY
 '''
@@ -23,7 +23,7 @@ def shadow_automaton():
 def test_full_matching_trace_denies(shadow_automaton):
     trace = [
         Event("EXEC", "/usr/bin/python3"),
-        Event("SPAWN", "/bin/bash"),
+        Event("EXEC", "/bin/bash"),
         Event("WRITE", "/etc/shadow"),
     ]
     result = run_trace(shadow_automaton, trace)
@@ -43,7 +43,7 @@ def test_prefix_only_allows(shadow_automaton):
 def test_wrong_final_target_allows(shadow_automaton):
     trace = [
         Event("EXEC", "/usr/bin/python3"),
-        Event("SPAWN", "/bin/bash"),
+        Event("EXEC", "/bin/bash"),
         Event("WRITE", "/tmp/test.txt"),
     ]
     result = run_trace(shadow_automaton, trace)
@@ -57,7 +57,7 @@ def test_noise_events_do_not_block_detection(shadow_automaton):
         Event("OPEN", "/var/log/syslog"),
         Event("EXEC", "/usr/bin/python3"),
         Event("OPEN", "/var/log/syslog"),
-        Event("SPAWN", "/bin/bash"),
+        Event("EXEC", "/bin/bash"),
         Event("OPEN", "/var/log/syslog"),
         Event("WRITE", "/etc/shadow"),
     ]
@@ -75,7 +75,7 @@ def test_empty_trace_allows(shadow_automaton):
 def test_events_after_violation_do_not_change_decision(shadow_automaton):
     trace = [
         Event("EXEC", "/usr/bin/python3"),
-        Event("SPAWN", "/bin/bash"),
+        Event("EXEC", "/bin/bash"),
         Event("WRITE", "/etc/shadow"),
         Event("DELETE", "/var/log/audit.log"),
     ]

@@ -45,12 +45,12 @@ POLICY protect_shadow
 VERSION 1
 
 ON EXEC("/usr/bin/python3")
-THEN SPAWN("/bin/bash")
+THEN EXEC("/bin/bash")
 THEN WRITE("/etc/shadow")
 DENY
 ```
 
-Supported event types: `EXEC`, `SPAWN`, `WRITE`, `OPEN`, `DELETE`.
+Supported event types: `EXEC`, `WRITE`, `OPEN`, `DELETE`.
 Supported actions: `DENY`, `ALERT`, `ALLOW`.
 
 Constructs deliberately excluded from v1: `WHERE`, `TIMEOUT`, boolean connectives,
@@ -100,7 +100,7 @@ python -m sentinelfs.cli compile examples/protect_shadow.sfs
 
 # Run an event trace against a policy
 python -m sentinelfs.cli run examples/protect_shadow.sfs \
-    --trace 'EXEC("/usr/bin/python3")' 'SPAWN("/bin/bash")' 'WRITE("/etc/shadow")'
+    --trace 'EXEC("/usr/bin/python3")' 'EXEC("/bin/bash")' 'WRITE("/etc/shadow")'
 ```
 
 ## Tests

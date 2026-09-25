@@ -21,7 +21,7 @@ POLICY_SOURCES = [
     '''POLICY protect_shadow
 VERSION 1
 ON EXEC("/usr/bin/python3")
-THEN SPAWN("/bin/bash")
+THEN EXEC("/bin/bash")
 THEN WRITE("/etc/shadow")
 DENY
 ''',
@@ -50,7 +50,7 @@ NOISE = [
     Event("EXEC", "/usr/bin/curl"),
     Event("DELETE", "/tmp/scratch"),
     Event("WRITE", "/tmp/scratch"),
-    Event("SPAWN", "/usr/bin/env"),
+    Event("EXEC", "/usr/bin/env"),
 ]
 
 

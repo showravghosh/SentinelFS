@@ -9,3 +9,12 @@ dist/
 .vscode/
 .idea/
 .DS_Store
+
+# Live session transcript, local to one machine.
+session.log
+
+# Raw feasibility traces: host-identifying (process names, paths, pids belonging
+# to unrelated software) and fully regenerable from the committed scripts.
+# See feasibility/README.md for the reproducibility chain.
+feasibility/out/
+feasibility/results/truth-*.json

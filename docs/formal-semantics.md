@@ -12,7 +12,7 @@ correct exactly insofar as they agree with this document.
 
 ### 1.1 Events
 
-Let $\mathcal{T} = \{\texttt{EXEC}, \texttt{SPAWN}, \texttt{WRITE}, \texttt{OPEN}, \texttt{DELETE}\}$
+Let $\mathcal{T} = \{\texttt{EXEC}, \texttt{WRITE}, \texttt{OPEN}, \texttt{DELETE}\}$
 be the finite set of **event types**, and let $\mathcal{S}$ be the set of finite strings over a
 fixed character set (in practice, filesystem paths and executable names).
 
@@ -22,6 +22,18 @@ An **event** is a pair $e = (t, a)$ with $t \in \mathcal{T}$ and $a \in \mathcal
 $$\Sigma = \mathcal{T} \times \mathcal{S}.$$
 
 Events are compared by structural equality: $(t,a) = (t',a')$ iff $t = t'$ and $a = a'$.
+
+**Observability criterion.** Every type in $\mathcal{T}$ corresponds to a single kernel event
+that names its own argument. This is a deliberate admission criterion, not a coincidence: a
+construct whose argument cannot be determined at the moment the event occurs is not admitted
+to the alphabet.
+
+An earlier version of this specification included a type $\texttt{SPAWN}$, intended to denote
+the creation of a child process running a named binary. It was removed after the Phase 2
+feasibility study established that no such kernel event exists: at `fork` time the child is a
+copy of its parent and the binary it will later execute has not been named, so the kernel
+cannot report it. The chain that motivated $\texttt{SPAWN}$ is expressible with
+$\texttt{EXEC}$ alone. See [`phase2-findings.md`](phase2-findings.md) §4.1.
 
 ### 1.2 Traces
 
@@ -61,7 +73,7 @@ rule        = "ON" event { "THEN" event } action ;
 
 event       = event-type "(" string ")" ;
 
-event-type  = "EXEC" | "SPAWN" | "WRITE" | "OPEN" | "DELETE" ;
+event-type  = "EXEC" | "WRITE" | "OPEN" | "DELETE" ;
 
 action      = "DENY" | "ALERT" | "ALLOW" ;
 
@@ -333,6 +345,12 @@ and must be restated wherever system-level guarantees are claimed.
 
 - **A1 (Observation completeness).** Every event in $\Sigma$ that a policy's pattern names is
   observed and delivered to the evaluator whenever it occurs on the monitored host.
+- **A1b (Descriptor provenance).** A $\texttt{WRITE}(p)$ event is generated when, and only
+  when, the descriptor being written can be associated with a filesystem object whose opening
+  was observed by the monitoring component. Writes to descriptors opened before the monitor
+  attached, inherited across `fork`, or referring to non-filesystem objects such as pipes and
+  sockets do not yield a $\texttt{WRITE}(p)$ event for any $p$; they fall outside $\Sigma$
+  rather than being reported with an empty or guessed argument.
 - **A2 (Order preservation).** Events are delivered to the evaluator in the order in which
   they occurred.
 - **A3 (State integrity).** The automaton state associated with a policy instance is not
@@ -342,9 +360,9 @@ and must be restated wherever system-level guarantees are claimed.
 - **A5 (Enforcement-path integrity).** The trusted components — the in-kernel observation
   hooks, the evaluator, and the enforcement actuator — are not compromised.
 
-> **Proposition 1 (Conditional completeness).** Under A1–A5, if the events occurring on the
-> monitored host form a trace $\tau$ with $\tau \models P$, then the deployed system reaches
-> the violation state $q_n$ for $P$ and issues $D(P,\tau)$.
+> **Proposition 1 (Conditional completeness).** Under A1, A1b, A2–A5, if the events occurring
+> on the monitored host form a trace $\tau$ with $\tau \models P$, then the deployed system
+> reaches the violation state $q_n$ for $P$ and issues $D(P,\tau)$.
 
 **Proof sketch.** A1 and A2 imply that the trace presented to the evaluator is $\tau$ itself,
 restricted to the events relevant to $P$; by the self-loop construction, events outside the
@@ -354,11 +372,21 @@ then gives acceptance, and Corollary 2.1 gives the decision. A5 ensures the deci
 one acted upon. $\blacksquare$
 
 **What is not claimed.** SentinelFS does not claim to detect attacks in general, nor to
-detect behaviours not expressible in the policy language of §2, nor to remain sound if A1–A5
-fail. In particular, an adversary who can suppress events (violating A1), reorder them
-(A2), or compromise the enforcement path (A5) is outside the threat model. These assumptions
-are load-bearing and any evaluation must report how far the deployed system actually
-satisfies them.
+detect behaviours not expressible in the policy language of §2, nor to remain sound if the
+assumptions fail. In particular, an adversary who can suppress events (violating A1),
+reorder them (A2), arrange for writes through descriptors the monitor never saw opened
+(A1b), or compromise the enforcement path (A5) is outside the threat model. These
+assumptions are load-bearing and any evaluation must report how far the deployed system
+actually satisfies them.
+
+**Empirical status.** A1 and A2 are empirical claims about a deployment, not theorems. The
+Phase 2 feasibility study provides supporting evidence for both under the conditions it
+tested: 4,514 of 4,516 required events observed with no losses and no ordering inversions,
+across four scenarios on one kernel, with the two mismatches attributable to the since-removed
+$\texttt{SPAWN}$ construct rather than to event loss. That is support under those conditions,
+not a general guarantee; the bounds of the evidence are recorded in
+[`phase2-findings.md`](phase2-findings.md) §5. A1b was introduced as a direct result of that
+study.
 
 ---
 
@@ -369,6 +397,17 @@ satisfies them.
 interleaved". It cannot express: absence of an event, disjunction over alternatives,
 constraints relating a process to its ancestors beyond what the pattern names literally,
 timing or rate conditions, or any condition on event arguments other than exact equality.
+
+**The alphabet is syscall-granular, not intent-granular.** $\Sigma$ is populated by events
+the kernel actually reports, which do not correspond one-to-one with a policy author's
+notion of an action. Writing to a file entails an `openat` and a `write`, and both are
+observed; a policy naming only $\texttt{WRITE}(p)$ therefore does not fire on a process that
+opens $p$ and never writes, and a policy intending to catch any access to $p$ must name
+$\texttt{OPEN}(p)$ as well. This is a property of the interface rather than a defect, but it
+determines what an author is in fact writing, and policies must be read accordingly. The
+point was identified in the Phase 2 study, where a ground-truth record kept at the level of
+intended actions disagreed with the kernel and produced spurious ordering violations; see
+[`phase2-findings.md`](phase2-findings.md) §4.3.
 
 **Asymmetry of `ALLOW`.** By Definition 3, `ALLOW` is the absence of an established
 violation, not an affirmative permission. A trace receives `ALLOW` both when it is genuinely
@@ -430,4 +469,4 @@ rather than by verification, and it should be described that way.
 | Theorem 3 | $q_n$ is absorbing |
 | Corollary 3.1 | Halting at $q_n$ is sound |
 | Corollary 4 | A violation of a `DENY`/`ALERT` policy never yields `ALLOW` |
-| Proposition 1 | Conditional completeness, under assumptions A1–A5 only |
+| Proposition 1 | Conditional completeness, under assumptions A1, A1b, A2–A5 only |

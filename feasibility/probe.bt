@@ -1,0 +1,84 @@
+#!/usr/bin/env bpftrace
+/*
+ * SentinelFS Phase 2 - kernel event observation probe.
+ *
+ * Observes the four event types of the v1 formal alphabet and emits one JSON
+ * record per event. This is a feasibility probe, not an enforcement mechanism:
+ * it only observes, and it reports rather than blocks.
+ *
+ * Mapping from kernel events to the formal alphabet Sigma = T x S:
+ *   EXEC   <- sched:sched_process_exec   (arg: executable path from the kernel)
+ *   SPAWN  <- sched:sched_process_fork   (arg: child comm, truncated to 16 bytes)
+ *   OPEN   <- syscalls:sys_enter_openat  (arg: pathname as passed by userspace)
+ *   WRITE  <- syscalls:sys_enter_write   (arg: path recovered by fd correlation)
+ *
+ * Known caveats, to be recorded in the findings report:
+ *   - sys_enter_write carries a file descriptor, not a path. The path is recovered
+ *     by correlating with the openat that produced the fd (@fdpath). Writes to fds
+ *     inherited across fork, or opened before this probe attached, resolve empty.
+ *   - openat pathnames are as userspace passed them and may be relative; no
+ *     resolution against the process cwd is performed.
+ *   - Probes are at syscall entry, so these are attempts, not completions:
+ *     a failing syscall still produces an event.
+ *   - sched_process_fork reports comm (max 16 bytes), not an executable path.
+ *     At fork time the child's comm is still the PARENT's, so a fork event cannot
+ *     name the binary the child will later execute. Identifying "spawned bash"
+ *     requires correlating fork with the child's subsequent exec.
+ *   - Events produced by bpftrace itself are excluded, because the probe's own
+ *     output writes would otherwise be observed, creating a feedback loop that
+ *     dominates the measurement.
+ *   - Descriptor values are cast explicitly to int64. sys_enter_write reports an
+ *     unsigned fd while sys_exit_openat reports a signed return value; without the
+ *     cast the two disagree on the map key type and bpftrace emits a warning onto
+ *     stdout, contaminating the data stream.
+ */
+
+BEGIN {
+    printf("{\"rec\":\"start\",\"ts_ns\":%llu}\n", nsecs);
+}
+
+tracepoint:sched:sched_process_exec
+/comm != "bpftrace"/
+{
+    printf("{\"rec\":\"event\",\"type\":\"EXEC\",\"arg\":\"%s\",\"pid\":%d,\"comm\":\"%s\",\"ts_ns\":%llu}\n",
+           str(args.filename), args.pid, comm, nsecs);
+}
+
+tracepoint:sched:sched_process_fork
+/comm != "bpftrace"/
+{
+    printf("{\"rec\":\"event\",\"type\":\"SPAWN\",\"arg\":\"%s\",\"pid\":%d,\"ppid\":%d,\"comm\":\"%s\",\"ts_ns\":%llu}\n",
+           str(args.child_comm), args.child_pid, args.parent_pid, comm, nsecs);
+}
+
+tracepoint:syscalls:sys_enter_openat
+/comm != "bpftrace"/
+{
+    @pending[tid] = str(args.filename);
+    printf("{\"rec\":\"event\",\"type\":\"OPEN\",\"arg\":\"%s\",\"pid\":%d,\"comm\":\"%s\",\"ts_ns\":%llu}\n",
+           str(args.filename), pid, comm, nsecs);
+}
+
+tracepoint:syscalls:sys_exit_openat {
+    if (args.ret >= 0) {
+        @fdpath[pid, (int64)args.ret] = @pending[tid];
+    }
+    delete(@pending[tid]);
+}
+
+tracepoint:syscalls:sys_enter_write
+/comm != "bpftrace"/
+{
+    printf("{\"rec\":\"event\",\"type\":\"WRITE\",\"arg\":\"%s\",\"fd\":%d,\"pid\":%d,\"comm\":\"%s\",\"ts_ns\":%llu}\n",
+           @fdpath[pid, (int64)args.fd], (int64)args.fd, pid, comm, nsecs);
+}
+
+tracepoint:syscalls:sys_enter_close {
+    delete(@fdpath[pid, (int64)args.fd]);
+}
+
+END {
+    printf("{\"rec\":\"stop\",\"ts_ns\":%llu}\n", nsecs);
+    clear(@fdpath);
+    clear(@pending);
+}
