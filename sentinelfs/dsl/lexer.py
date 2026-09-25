@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from .errors import CompileError
 
 EVENT_TYPES = ("EXEC", "WRITE", "OPEN", "DELETE")
-ACTIONS = ("DENY", "ALERT", "ALLOW")
+ACTIONS = ("DENY", "ALERT")
 KEYWORDS = frozenset(("POLICY", "VERSION", "ON", "THEN", *ACTIONS, *EVENT_TYPES))
 
 

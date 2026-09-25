@@ -15,4 +15,4 @@ class Policy:
     name: str
     version: int
     sequence: tuple[Event, ...]
-    action: str  # DENY | ALERT | ALLOW
+    action: str  # DENY | ALERT

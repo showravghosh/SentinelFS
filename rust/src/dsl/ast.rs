@@ -45,21 +45,31 @@ impl fmt::Display for EventType {
 }
 
 /// The enforcement actions a policy may specify.
+///
+/// `ALLOW` was removed from this domain. It was decision-inert: the decision was
+/// the same whether such a policy fired or not. Reading it instead as an
+/// affirmative override was unavailable, because under the monotone trace
+/// semantics and the absorbing violation state a single match would have
+/// suppressed denial host-wide thereafter.
+///
+/// [`Decision::Allow`] remains, and is a different thing: it is what the
+/// evaluator returns when no violation was established. See
+/// `docs/phase5b0f-decision-domain.md`.
+///
+/// [`Decision::Allow`]: crate::runtime::executor::Decision::Allow
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Action {
     Deny,
     Alert,
-    Allow,
 }
 
 impl Action {
-    pub const ALL: [Action; 3] = [Action::Deny, Action::Alert, Action::Allow];
+    pub const ALL: [Action; 2] = [Action::Deny, Action::Alert];
 
     pub fn as_str(self) -> &'static str {
         match self {
             Action::Deny => "DENY",
             Action::Alert => "ALERT",
-            Action::Allow => "ALLOW",
         }
     }
 
@@ -67,7 +77,6 @@ impl Action {
         match word {
             "DENY" => Some(Action::Deny),
             "ALERT" => Some(Action::Alert),
-            "ALLOW" => Some(Action::Allow),
             _ => None,
         }
     }

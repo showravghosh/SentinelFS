@@ -1,6 +1,6 @@
 # SentinelFS: Formal Semantics of the Core Policy Language (v1)
 
-**Status:** working specification for the core language, at revision **v1.4**.
+**Status:** working specification for the core language, at revision **v1.5**.
 
 **Revision history.** No revision has changed the alphabet, the grammar, the compilation
 function, or any of Theorems 1–3, Lemma 1 or the corollaries. Those are statements about an
@@ -15,7 +15,8 @@ implicit that an implementation would otherwise have to decide for itself.
 | v1.2 | `v1.2-spec` | two statements in §8: the host-wide trace of §1.2 permits a pattern to be satisfied across unrelated processes, and no reset or expiry construct exists. Both were already consequences of v1.1; each is a point at which an implementation could narrow or widen the semantics while appearing to implement them. See [`phase5a-state-analysis.md`](phase5a-state-analysis.md) |
 | v1.3 | `v1.3-spec` | §7 names correlation-capacity exhaustion as a threat, declares $C$ as a security parameter, forbids silent eviction, and requires insertion failure to be observable. A1b already implied the condition; v1.3 states the mechanism and what an implementation must do about it. See [`phase5a-e3-findings.md`](phase5a-e3-findings.md) |
 | v1.4 | `v1.4-spec` | §8 states MP1–MP3 for multi-policy evaluation, and records that the host verdict function $F$ over several policies' decisions is undefined. MP1–MP3 follow from existing semantics; $F$ is a genuine gap that blocks multi-policy enforcement. See [`phase5b-combination.md`](phase5b-combination.md) |
-| v1.4 corrected | this revision | the v1.4 text stated that MP2 requires $F$ to be associative, commutative and idempotent. That was imprecise: only commutativity is required by order-independence, associativity is required for parallel reduction, and idempotence does not follow from MP2. The claim is corrected in place and the original is recorded here, per methodology rule M6 |
+| v1.4 corrected | in `v1.4-spec` lineage | the v1.4 text stated that MP2 requires $F$ to be associative, commutative and idempotent. That was imprecise: only commutativity is required by order-independence, associativity is required for parallel reduction, and idempotence does not follow from MP2. The claim is corrected in place and the original is recorded here, per methodology rule M6 |
+| **v1.5** | **this revision** | **a language revision.** `ALLOW` is removed from the action domain, which changes the accepted language: a policy that compiled under v1.4 is rejected under v1.5. $\mathcal{A}$ and the decision domain $\mathcal{D}$ are now distinguished, since writing both as $\mathcal{A}$ is what made an `ALLOW` action meaningless. Corollary 4 is strengthened by losing a now-vacuous hypothesis; no other formal result is affected. The loss of affirmative permission is recorded in §8 as a limitation and a deferred construct. See [`phase5b0f-decision-domain.md`](phase5b0f-decision-domain.md) |
 
 This document defines the syntax, the trace semantics, the compilation function, and states
 and proves the determinism and compilation-correctness theorems. It is the normative
@@ -177,7 +178,7 @@ event       = event-type "(" string ")" ;
 
 event-type  = "EXEC" | "WRITE" | "OPEN" | "DELETE" ;
 
-action      = "DENY" | "ALERT" | "ALLOW" ;
+action      = "DENY" | "ALERT" ;
 
 identifier  = letter { letter | digit | "_" } ;
 number      = digit { digit } ;
@@ -200,7 +201,9 @@ $$P = (\mathit{name}, \mathit{ver}, \sigma, \alpha)$$
 
 where $\mathit{name}$ is an identifier, $\mathit{ver} \in \mathbb{N}$ is a version number,
 $\sigma = \langle e_1, \dots, e_n\rangle \in \Sigma^{*}$ is the **event pattern**, and
-$\alpha \in \mathcal{A} = \{\texttt{DENY}, \texttt{ALERT}, \texttt{ALLOW}\}$ is the **action**.
+$\alpha \in \mathcal{A}$ is the **action**, where
+
+$$\mathcal{A} = \{\texttt{DENY}, \texttt{ALERT}\}.$$
 
 $P$ is **well-formed** iff
 
@@ -230,12 +233,24 @@ reference to any automaton, compiler, or implementation. This independence is wh
 it usable as a specification against which the compiler is judged, and as the oracle for
 the differential testing described in §9.
 
-> **Definition 3 (Decision).** The decision function $D : \mathcal{P} \times \Sigma^* \to \mathcal{A}$
+> **Definition 3 (Decision).** The decision function $D : \mathcal{P} \times \Sigma^* \to \mathcal{D}$
 > is
 > $$D(P, \tau) = \begin{cases} \alpha & \text{if } \tau \models P \\ \texttt{ALLOW} & \text{otherwise.} \end{cases}$$
 
+where the **decision domain** is
+
+$$\mathcal{D} = \mathcal{A} \cup \{\texttt{ALLOW}\} = \{\texttt{DENY}, \texttt{ALERT}, \texttt{ALLOW}\}.$$
+
+**Actions and decisions are different sets.** *Revised in v1.5.* Earlier revisions wrote both
+as $\mathcal{A}$, and that conflation is what made an `ALLOW` action meaningless: with
+$\texttt{ALLOW} \in \mathcal{A}$, both branches of Definition 3 returned `ALLOW` for such a
+policy, so its decision was the same whether it had fired or not. The sets are now
+distinguished. An author may write `DENY` or `ALERT`; the evaluator may return either of those
+or `ALLOW`.
+
 An `ALLOW` decision therefore means "no policy violation was established", not "the trace
-was affirmatively permitted by a rule". §8 discusses this asymmetry.
+was affirmatively permitted by a rule" — and no policy can request it, because it is not an
+action. §8 discusses the consequences.
 
 ---
 
@@ -426,11 +441,17 @@ executor, which halts at the violation state rather than draining the remaining 
 
 ### 6.4 Enforcement soundness
 
-> **Corollary 4 (Enforcement soundness).** Let $P$ be well-formed with action
-> $\alpha \in \{\texttt{DENY}, \texttt{ALERT}\}$. If $\tau \models P$ then $D(P,\tau) \neq \texttt{ALLOW}$.
+> **Corollary 4 (Enforcement soundness).** Let $P$ be well-formed. If $\tau \models P$ then
+> $D(P,\tau) \neq \texttt{ALLOW}$.
 
-**Proof.** By Definition 3, $\tau \models P$ gives $D(P,\tau) = \alpha \in \{\texttt{DENY},\texttt{ALERT}\}$,
-and `ALLOW` is distinct from both. $\blacksquare$
+**Proof.** By Definition 3, $\tau \models P$ gives $D(P,\tau) = \alpha \in \mathcal{A} =
+\{\texttt{DENY},\texttt{ALERT}\}$, and $\texttt{ALLOW} \notin \mathcal{A}$. $\blacksquare$
+
+*Strengthened in v1.5.* The statement previously carried the hypothesis
+$\alpha \in \{\texttt{DENY},\texttt{ALERT}\}$, which existed solely to exclude policies whose
+action was `ALLOW`. With `ALLOW` removed from $\mathcal{A}$ no such policy exists, the
+hypothesis is vacuous, and the corollary holds for every well-formed policy. This is the only
+formal result affected by the revision, and it is affected by becoming stronger.
 
 Corollary 4 is deliberately weak in exactly one respect: it is a statement about the
 *decision function*, not about the *deployed system*. Whether a `DENY` decision actually
@@ -551,6 +572,28 @@ study.
 ---
 
 ## 8. Scope, limitations, and asymmetry of ALLOW
+
+**No policy can grant an exception.** *Added in revision v1.5.* The action domain is
+$\{\texttt{DENY}, \texttt{ALERT}\}$: a policy may forbid an operation or record it, and cannot
+permit one. Permission is the default and is not expressible as a policy outcome, so there is
+no way to write a rule that exempts something from another rule.
+
+This is a real limitation and not a simplification. A deployment needing an exception must
+express it by narrowing the pattern that would otherwise match, which is possible only when
+the distinction is expressible in the event alphabet — and §1.4 already bounds what that
+alphabet can say.
+
+`ALLOW` was previously admitted as an action and could not have supplied this, for two
+independent reasons recorded in [`phase5b0f-decision-domain.md`](phase5b0f-decision-domain.md).
+Read as a request it was inert, because Definition 3 returned `ALLOW` for such a policy
+whether or not it fired. Read as an override it was unavailable: the violated set is monotone
+under Definition 1 and the violation state is absorbing under Theorem 3, so a single matching
+event would have suppressed denial for every `DENY` policy, host-wide, for the remaining
+lifetime of the policy set. Making the override reading work would require coordinated changes
+to state persistence, scope and reset behaviour, all three of which are deferred constructs.
+
+Affirmative permission is therefore recorded below as a deferred construct rather than
+silently absent.
 
 **Pathname-oriented, not object-oriented.** *Added in revision v1.1.* The language describes
 operations on named routes, and §1.4 establishes that it cannot describe operations on
@@ -715,6 +758,7 @@ findings above. None is part of the language, and each would require its own rev
 | `TIMEOUT` | bounded temporal windows | moves the language beyond the regular fragment unless the bound is discretised into event counts; whether Theorem 2 generalises depends on the formulation |
 | pattern scoping | restrict a pattern to a process or a lineage | addresses the cross-process consequence above; requires a notion of process identity in the semantics, which §1.4 currently confines to evidence |
 | reset or expiry | return an instance to $q_0$ | changes which traces violate a policy; interacts with Theorem 3 |
+| affirmative permission | a policy outcome that permits, creating exceptions to other policies | requires coordinated changes to state persistence, scope and reset; the naive form is unavailable under monotone traces and absorbing violation states |
 | decision combination ($F$) | a join over the decisions of several policies | **blocks multi-policy enforcement**, not only conflict analysis; see the multi-policy subsection above |
 
 ---

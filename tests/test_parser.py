@@ -59,3 +59,41 @@ def test_spawn_is_not_in_the_v1_alphabet():
 def test_admitted_event_types_are_exactly_the_observable_four():
     from sentinelfs.dsl.lexer import EVENT_TYPES
     assert set(EVENT_TYPES) == {"EXEC", "WRITE", "OPEN", "DELETE"}
+
+def test_allow_is_not_in_the_action_domain():
+    """ALLOW was removed from the action grammar.
+
+    It was decision-inert: Definition 3 returned the policy's action when the
+    trace violated it and ALLOW otherwise, so for an ALLOW-action policy both
+    branches gave ALLOW and the decision could not distinguish a policy that
+    fired from one that did not.
+
+    Reading it instead as an affirmative override was not available: under the
+    monotone trace semantics of Definition 1 and the absorbing violation state
+    of Theorem 3, a single match would have suppressed denial host-wide for the
+    remaining lifetime of the policy set. See docs/phase5b0f-decision-domain.md.
+    """
+    with pytest.raises(CompileError):
+        parse_source('POLICY p\nVERSION 1\nON EXEC("/bin/sh")\nALLOW\n')
+
+
+def test_admitted_actions_are_exactly_deny_and_alert():
+    from sentinelfs.dsl.lexer import ACTIONS
+    assert set(ACTIONS) == {"DENY", "ALERT"}
+
+
+def test_allow_remains_a_decision_although_not_an_action():
+    """Removing the action does not remove the decision.
+
+    ALLOW is still what Definition 3 returns when no violation was established,
+    which is the outcome for every non-violating trace.
+    """
+    from sentinelfs.compiler.automaton import compile_policy
+    from sentinelfs.runtime.executor import run_trace
+
+    policy = parse_source('POLICY p\nVERSION 1\nON EXEC("/bin/sh")\nDENY\n')
+    automaton = compile_policy(policy)
+    result = run_trace(automaton, [Event("EXEC", "/bin/other")])
+
+    assert result.triggered is False
+    assert result.decision == "ALLOW"

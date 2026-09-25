@@ -38,7 +38,7 @@ class _Parser:
         if self.peek().type not in ACTIONS:
             tok = self.peek()
             raise CompileError(
-                f"Expected DENY, ALERT or ALLOW but found {tok.type} {tok.value!r}",
+                f"Expected DENY or ALERT but found {tok.type} {tok.value!r}",
                 tok.line,
             )
         action = self.advance().type

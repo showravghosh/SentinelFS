@@ -209,10 +209,12 @@ def test_corollary_3_1_early_exit_agrees_with_full_drain(policy):
 # --- Corollary 4: enforcement soundness -------------------------------------------
 
 def test_corollary4_violation_never_yields_allow(policy):
-    """For DENY/ALERT policies, a violating trace never produces ALLOW."""
-    if policy.action == "ALLOW":
-        pytest.skip("Corollary 4 is stated for DENY/ALERT policies only")
+    """A violating trace never produces ALLOW.
 
+    Corollary 4 no longer carries a hypothesis restricting it to DENY/ALERT
+    policies: since ALLOW was removed from the action domain, every well-formed
+    policy has one of those two actions. The corollary applies to all of them.
+    """
     rng = random.Random(29)
     automaton = compile_policy(policy)
     pattern = list(policy.sequence)

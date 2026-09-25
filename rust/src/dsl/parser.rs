@@ -90,7 +90,7 @@ impl Parser {
                 let tok = self.peek();
                 return Err(CompileError::at_line(
                     format!(
-                        "Expected DENY, ALERT or ALLOW but found {} {:?}",
+                        "Expected DENY or ALERT but found {} {:?}",
                         tok.kind.type_name(),
                         tok.kind.value()
                     ),

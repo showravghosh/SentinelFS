@@ -7,7 +7,7 @@
 mod common;
 
 use common::{all_policies, embeds, noise, Rng, SHADOW};
-use sentinelfs::dsl::ast::{Event, EventType};
+use sentinelfs::dsl::ast::{Action, Event, EventType};
 use sentinelfs::{compile_policy, parse_source, run_trace, Decision};
 
 fn random_trace(rng: &mut Rng, pattern: &[Event], max_len: usize) -> Vec<Event> {
@@ -125,10 +125,11 @@ fn corollary2_1_decision_matches_definition_3() {
         for _ in 0..300 {
             let trace = random_trace(&mut rng, &policy.sequence, 12);
             let expected = if embeds(&policy.sequence, &trace) {
-                match policy.action.as_str() {
-                    "DENY" => Decision::Deny,
-                    "ALERT" => Decision::Alert,
-                    _ => Decision::Allow,
+                // Exhaustive over Action: adding a variant must break this
+                // rather than defaulting to Allow.
+                match policy.action {
+                    Action::Deny => Decision::Deny,
+                    Action::Alert => Decision::Alert,
                 }
             } else {
                 Decision::Allow
@@ -187,9 +188,9 @@ fn corollary4_violation_never_yields_allow() {
     let mut rng = Rng::new(29);
     for source in all_policies() {
         let policy = parse_source(source).unwrap();
-        if policy.action.as_str() == "ALLOW" {
-            continue; // Corollary 4 is stated for DENY/ALERT policies
-        }
+        // No policy is skipped: since ALLOW was removed from the action domain,
+        // every well-formed policy has action DENY or ALERT and Corollary 4
+        // applies to all of them without a hypothesis.
         let automaton = compile_policy(&policy).unwrap();
 
         let mut checked = 0;

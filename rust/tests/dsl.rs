@@ -123,3 +123,40 @@ fn wf4_event_argument_must_be_non_empty() {
     let seq = vec![Event::new(EventType::Exec, "")];
     assert!(validate(&policy_with("p", 1, seq)).is_err());
 }
+
+// --- ALLOW removed from the action domain ---------------------------------------
+
+#[test]
+fn allow_is_not_in_the_action_domain() {
+    // ALLOW was decision-inert: the decision was the same whether such a policy
+    // fired or not. Reading it as an affirmative override was unavailable under
+    // the monotone trace semantics and the absorbing violation state, where a
+    // single match would have suppressed denial host-wide thereafter.
+    // See docs/phase5b0f-decision-domain.md.
+    let err = parse_source("POLICY p\nVERSION 1\nON EXEC(\"/bin/sh\")\nALLOW\n")
+        .expect_err("ALLOW must be rejected as an action");
+    assert!(
+        err.to_string().contains("Expected DENY or ALERT"),
+        "unexpected diagnostic: {err}"
+    );
+}
+
+#[test]
+fn admitted_actions_are_exactly_deny_and_alert() {
+    let names: Vec<&str> = Action::ALL.iter().map(|a| a.as_str()).collect();
+    assert_eq!(names, vec!["DENY", "ALERT"]);
+}
+
+#[test]
+fn allow_remains_a_decision_although_not_an_action() {
+    // Removing the action does not remove the decision: ALLOW is still what the
+    // evaluator returns when no violation was established.
+    use sentinelfs::{compile_policy, run_trace, Decision};
+
+    let policy = parse_source("POLICY p\nVERSION 1\nON EXEC(\"/bin/sh\")\nDENY\n").unwrap();
+    let automaton = compile_policy(&policy).unwrap();
+    let result = run_trace(&automaton, &[Event::new(EventType::Exec, "/bin/other")]);
+
+    assert!(!result.triggered);
+    assert_eq!(result.decision, Decision::Allow);
+}

@@ -18,7 +18,7 @@ class Automaton:
     states: tuple[str, ...]
     transitions: tuple[Transition, ...]
     final_state: str
-    action: str  # DENY | ALERT | ALLOW
+    action: str  # DENY | ALERT
 
     def transition_from(self, state: str) -> Transition | None:
         for t in self.transitions:

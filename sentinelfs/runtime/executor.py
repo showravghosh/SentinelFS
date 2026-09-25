@@ -18,7 +18,7 @@ class ExecutionResult:
     policy_version: int
     final_state: str
     triggered: bool  # True iff the automaton reached its final (violation) state
-    decision: str  # DENY | ALERT | ALLOW
+    decision: str  # DENY | ALERT | ALLOW -- ALLOW is a decision, not an action
     path: tuple[StepResult, ...]
 
 

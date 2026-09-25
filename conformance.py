@@ -120,6 +120,7 @@ def main() -> int:
         "missing_action.sfs": 'POLICY p\nVERSION 1\nON EXEC("x")\n',
         "unknown_event.sfs": 'POLICY p\nVERSION 1\nON FOO("x")\nDENY\n',
         "removed_spawn.sfs": 'POLICY p\nVERSION 1\nON SPAWN("/bin/bash")\nDENY\n',
+        "removed_allow_action.sfs": 'POLICY p\nVERSION 1\nON EXEC("/bin/sh")\nALLOW\n',
         "trailing_tokens.sfs": 'POLICY p\nVERSION 1\nON EXEC("x")\nDENY\nEXTRA\n',
         "unterminated_string.sfs": 'POLICY p\nVERSION 1\nON EXEC("x\nDENY\n',
         "bad_character.sfs": 'POLICY foo$bar\nVERSION 1\nON EXEC("x")\nDENY\n',

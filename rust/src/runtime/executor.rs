@@ -27,7 +27,6 @@ impl Decision {
         match action {
             Action::Deny => Decision::Deny,
             Action::Alert => Decision::Alert,
-            Action::Allow => Decision::Allow,
         }
     }
 }

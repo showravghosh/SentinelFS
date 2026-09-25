@@ -5,7 +5,8 @@ A deterministic, formally specified policy compiler and runtime enforcement fram
 SentinelFS takes security policies written in a deliberately restricted domain-specific
 language, compiles them into deterministic finite automata, and evaluates Linux
 security-relevant events against those automata to produce reproducible
-`ALLOW` / `ALERT` / `DENY` decisions bound to cryptographically linked evidence.
+`DENY` / `ALERT` / `ALLOW` decisions bound to cryptographically linked evidence,
+where `ALLOW` is the outcome when no policy was violated.
 
 No machine learning, no probabilistic scoring, no learned thresholds.
 
@@ -97,7 +98,12 @@ DENY
 ```
 
 Supported event types: `EXEC`, `WRITE`, `OPEN`, `DELETE`.
-Supported actions: `DENY`, `ALERT`, `ALLOW`.
+Supported actions: `DENY`, `ALERT`.
+
+`ALLOW` is a decision and not an action: it is what the evaluator returns when no violation
+was established. A policy cannot request it, so no policy can grant an exception to another.
+It was removed from the action grammar in revision v1.5; the reasoning is in
+[`docs/phase5b0f-decision-domain.md`](docs/phase5b0f-decision-domain.md).
 
 Constructs deliberately excluded from v1: `WHERE`, `TIMEOUT`, boolean connectives,
 unrestricted negation, quantification, and cross-process relational constraints.
@@ -114,7 +120,7 @@ the compilation function, and establishes:
 | Lemma 1 | The state reached after a trace is determined by the longest matching pattern prefix |
 | Theorem 2 | Compilation correctness: a trace violates the policy if and only if the compiled automaton accepts it |
 | Theorem 3 | The violation state is absorbing, so halting on violation is sound |
-| Corollary 4 | A violating trace of a DENY or ALERT policy never yields ALLOW |
+| Corollary 4 | A violating trace never yields ALLOW, for every well-formed policy |
 | Proposition 1 | Conditional completeness, under the explicitly stated assumptions A1-A5 |
 
 Guarantees are conditional on the observation and trust assumptions stated in the
