@@ -131,18 +131,52 @@ uses, and a claim should be readable as exactly one of them.
 
 | Term | Means | Typical source |
 |---|---|---|
-| **defined** | the specification gives the semantics | `formal-semantics.md` |
+| **defined** | the specification explicitly gives the semantics | `formal-semantics.md` |
 | **proved** | a formal argument establishes the property | Theorems 1–3, Lemma 1, the corollaries |
-| **measured** | an experiment provides empirical evidence | the findings documents |
-| **exposed** | the development process revealed a gap | revision history, retractions |
-| **supported** | true within a stated scope and set of assumptions | anything resting on A1–A5, or on one kernel |
+| **measured** | an experiment produced an observation | the findings documents |
+| **corroborates** | a measurement agrees with an already defined or proved claim; it does not prove it | the differential and conformance tests |
+| **exposed** | development revealed a specification or implementation gap | revision history, retractions |
+| **supported** | evidence holds within an explicitly stated experimental scope | anything resting on A1–A5, or on one kernel |
+
+### The operational rule
+
+> **Never move upward in evidentiary strength without the corresponding evidence.**
+
+The terms are ordered by strength, and a claim may be stated only at the level its evidence
+reaches. Two worked examples, both from this project:
+
+```
+75 tests passed
+      -> measured
+
+the tests agree with Theorem 2
+      -> corroborates
+
+Theorem 2 follows from the definitions of section 5 and 6
+      -> proved
+```
+
+Only the third is a claim about the theorem. The first two are claims about the tests, and
+neither becomes the third by repetition or by accumulating more tests.
+
+```
+the Phase 5A experiment found a correlation-capacity boundary
+      -> measured, and exposed
+
+the formal method prevented implementation errors
+      -> NOT established
+```
+
+The second sentence moves from *exposed* to a causal claim with no evidence supplying the
+step. That is the failure M7 exists to catch.
 
 The distinctions that matter most in practice:
 
 - A property may be **defined** without being **proved**, and **proved** without being
   **measured** in any deployment.
-- **Measured** never upgrades to **proved**. The differential tests corroborate Theorem 2;
-  they do not establish it.
+- **Measured** never upgrades to **proved**, and **corroborates** is the correct word for the
+  relation between them. The differential tests corroborate Theorem 2; they do not establish
+  it, and no number of additional passing tests would.
 - **Supported** is not **proved** with caveats — it is a weaker claim about a bounded set of
   observations, and it stops being true outside that scope.
 - **Exposed** describes what happened in this project. It carries no claim about what would
