@@ -530,7 +530,7 @@ cannot exclude them should not rely on pathname-based policies for the objects c
 $\texttt{WRITE}(p)$ event exists only where the descriptor's opening was observed. An
 implementation maintains that association in a structure of finite capacity, written here as
 
-$$C = 	ext{the maximum number of simultaneously maintained write correlations.}$$
+$$C = \text{the maximum number of simultaneously maintained write correlations.}$$
 
 An adversary able to cause more simultaneously tracked writable file associations than $C$
 can cause subsequent writes to become unresolved under A1b. Such writes do not generate
@@ -668,10 +668,10 @@ remainder. The verdict for that operation would be correct and the system would 
 wrong: a policy that did not receive the event has not advanced, so its state is incorrect for
 every subsequent event. **A verdict may be short-circuited; a transition may not.**
 
-**The gap.** With $r$ policies active there are $r$ decisions $D(P_1,	au),\dots,D(P_r,	au)$,
+**The gap.** With $r$ policies active there are $r$ decisions $D(P_1,\tau),\dots,D(P_r,\tau)$,
 and an enforcement mechanism returns one. The specification does not define
 
-$$Figl(D(P_1,	au),\dots,D(P_r,	au)igr)$$
+$$F\bigl(D(P_1,\tau),\dots,D(P_r,\tau)\bigr)$$
 
 and an implementation must not choose it. The question is not which priority ordering to
 adopt; it is what object represents the collection of independent decisions, and how that

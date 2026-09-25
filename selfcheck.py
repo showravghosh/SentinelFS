@@ -223,45 +223,124 @@ else:
     else:
         print("  SKIP  release binary not built (cd rust && cargo build --release)")
 
-# --- Document rendering ---------------------------------------------------------
+# --- Normative source invariant ---------------------------------------------------
 
-section("Document rendering")
+section("Normative source invariant")
 
-# A LaTeX macro written into a Python string literal without escaping its
-# backslash has the backslash-t read as a tab, leaving a literal tab followed
-# by the remainder of the macro name. Six such occurrences were committed and
-# corrected. The failure is silent -- the document still parses and every test
-# still passes -- so it is checked mechanically rather than by reading.
+# Normative Markdown must contain no control characters beyond the permitted
+# whitespace set. The permitted set is declared here, positively; everything
+# else in the C0 range, plus DEL, is a defect.
 #
-# TAB and BSL are built with chr() deliberately: writing either as an escape
-# in this file would reintroduce the defect being guarded against.
-TAB = chr(9)
-BSL = chr(92)
-MANGLED = TAB + "exttt{"
-CORRECT = BSL + "texttt{"
+# This replaces an earlier guard that searched for one known corruption. That
+# guard passed while seven occurrences of the same fault, in four other macros,
+# sat in the committed file: a LaTeX macro written into a Python string literal
+# without escaping its backslash has its leading escape interpreted, so
+# backslash-t becomes TAB, backslash-b becomes BACKSPACE, and so on. Checking
+# the invariant catches every member of that class, including ones not yet seen.
+#
+# Tabs are not permitted in normative Markdown: nothing here needs one, and a
+# tab is the most common product of this corruption.
+# The repository's line-ending policy is LF, set by .gitattributes in commit
+# 222c6c2. SPACE and LINE FEED are the only whitespace a normative Markdown
+# file needs; everything else in the C0 range, plus DEL, is a defect.
+#
+# CRLF and a standalone CR are both rejected, and are reported separately: a
+# CRLF file violates the line-ending policy, whereas a lone CR is the
+# signature of an escape-sequence corruption. Conflating them would misreport
+# whichever occurred.
+PERMITTED = {10, 32}  # LINE FEED, SPACE
 
-for doc in sorted((ROOT / "docs").glob("*.md")):
-    body = doc.read_text(encoding="utf-8")
-    bad = body.count(MANGLED)
-    where = [str(i) for i, line in enumerate(body.splitlines(), 1)
-             if MANGLED in line]
-    check(f"{doc.name} has no mangled LaTeX macro", bad == 0,
-          f"{bad} occurrence(s) at line(s) {', '.join(where)}")
+CONTROL_NAMES = {
+    0: "NUL", 7: "BEL", 8: "BACKSPACE", 9: "TAB", 11: "VERTICAL TAB",
+    12: "FORM FEED", 13: "CARRIAGE RETURN", 27: "ESCAPE", 127: "DELETE",
+}
 
+CR, LF = 13, 10
+
+
+def validate_normative(raw: bytes):
+    """Return (crlf_count, offenders) for normative source held as bytes.
+
+    The bytes are decoded explicitly. read_text() is not used anywhere on this
+    path: text mode applies universal-newline translation, which rewrites a
+    lone CR to LF before it can be observed. Nor is splitlines() used, which
+    consumes VERTICAL TAB, FORM FEED and CARRIAGE RETURN as terminators.
+    """
+    body = raw.decode("utf-8")
+    crlf = body.count(chr(CR) + chr(LF))
+    offenders = []
+    line = 1
+    for k, ch in enumerate(body):
+        o = ord(ch)
+        if o == LF:
+            line += 1
+            continue
+        if o == CR:
+            # Part of a CRLF pair: counted as a line-ending violation above,
+            # not also as a stray control character.
+            if k + 1 < len(body) and body[k + 1] == chr(LF):
+                continue
+            offenders.append((line, o))
+            continue
+        if (o < 32 or o == 127) and o not in PERMITTED:
+            offenders.append((line, o))
+    return crlf, offenders
+
+
+def describe(offenders):
+    out = ", ".join(
+        f"line {n}: {CONTROL_NAMES.get(o, 'U+%04X' % o)}" for n, o in offenders[:6]
+    )
+    if len(offenders) > 6:
+        out += f" (+{len(offenders) - 6} more)"
+    return out
+
+
+NORMATIVE = sorted((ROOT / "docs").glob("*.md")) + [ROOT / "README.md"]
+
+for doc in NORMATIVE:
+    if not doc.exists():
+        continue
+    crlf, offenders = validate_normative(doc.read_bytes())
+    check(f"{doc.name} contains no forbidden control characters",
+          not offenders, describe(offenders))
+    check(f"{doc.name} uses LF line endings", crlf == 0,
+          f"{crlf} CRLF pair(s)")
+
+# The same validator against the content git will store. The working tree and
+# the blob can differ across clean/smudge filters and eol normalisation, so
+# validating only the working tree leaves the committed bytes unchecked.
+for doc in NORMATIVE:
+    rel = doc.relative_to(ROOT).as_posix()
+    blob = subprocess.run(["git", "show", f":{rel}"], cwd=ROOT,
+                          capture_output=True)
+    if blob.returncode != 0:
+        continue  # not in the index
+    crlf, offenders = validate_normative(blob.stdout)
+    check(f"{doc.name} blob contains no forbidden control characters",
+          not offenders, describe(offenders))
+    check(f"{doc.name} blob uses LF line endings", crlf == 0,
+          f"{crlf} CRLF pair(s)")
+
+# The invariant forbids corruption but does not require the macros to be
+# present. Check separately that the specification still carries LaTeX, so a
+# file emptied of its markup would not pass silently.
 spec_body = (ROOT / "docs" / "formal-semantics.md").read_text(encoding="utf-8")
-check("formal-semantics.md still uses the LaTeX macro",
-      spec_body.count(CORRECT) > 0,
-      f"{spec_body.count(CORRECT)} occurrence(s)")
+BSL = chr(92)
+for macro in ("texttt{", "text{", "tau", "bigl", "bigr", "mathcal{"):
+    check(f"formal-semantics.md still uses the {macro.rstrip('{')} macro",
+          BSL + macro in spec_body)
 
 # Corollary 4 lost its hypothesis in v1.5. The summary table must not restate
 # the superseded form, and must not assert a verdict meaning for DENY or ALERT,
 # which the specification does not define.
-summary_stale = "A violation of a `DENY`/`ALERT` policy never yields `ALLOW`"
-check("Corollary 4 summary row is not the superseded form",
-      summary_stale not in spec_body)
-check("Corollary 4 summary row states the strengthened result",
-      "A violating trace never yields `ALLOW`, for every well-formed policy"
-      in spec_body)
+BT = chr(96)
+stale = ("A violation of a " + BT + "DENY" + BT + "/" + BT + "ALERT" + BT
+         + " policy never yields " + BT + "ALLOW" + BT)
+fresh = ("A violating trace never yields " + BT + "ALLOW" + BT
+         + ", for every well-formed policy")
+check("Corollary 4 summary row is not the superseded form", stale not in spec_body)
+check("Corollary 4 summary row states the strengthened result", fresh in spec_body)
 
 # --- Result ---------------------------------------------------------------------
 
