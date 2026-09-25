@@ -223,6 +223,46 @@ else:
     else:
         print("  SKIP  release binary not built (cd rust && cargo build --release)")
 
+# --- Document rendering ---------------------------------------------------------
+
+section("Document rendering")
+
+# A LaTeX macro written into a Python string literal without escaping its
+# backslash has the backslash-t read as a tab, leaving a literal tab followed
+# by the remainder of the macro name. Six such occurrences were committed and
+# corrected. The failure is silent -- the document still parses and every test
+# still passes -- so it is checked mechanically rather than by reading.
+#
+# TAB and BSL are built with chr() deliberately: writing either as an escape
+# in this file would reintroduce the defect being guarded against.
+TAB = chr(9)
+BSL = chr(92)
+MANGLED = TAB + "exttt{"
+CORRECT = BSL + "texttt{"
+
+for doc in sorted((ROOT / "docs").glob("*.md")):
+    body = doc.read_text(encoding="utf-8")
+    bad = body.count(MANGLED)
+    where = [str(i) for i, line in enumerate(body.splitlines(), 1)
+             if MANGLED in line]
+    check(f"{doc.name} has no mangled LaTeX macro", bad == 0,
+          f"{bad} occurrence(s) at line(s) {', '.join(where)}")
+
+spec_body = (ROOT / "docs" / "formal-semantics.md").read_text(encoding="utf-8")
+check("formal-semantics.md still uses the LaTeX macro",
+      spec_body.count(CORRECT) > 0,
+      f"{spec_body.count(CORRECT)} occurrence(s)")
+
+# Corollary 4 lost its hypothesis in v1.5. The summary table must not restate
+# the superseded form, and must not assert a verdict meaning for DENY or ALERT,
+# which the specification does not define.
+summary_stale = "A violation of a `DENY`/`ALERT` policy never yields `ALLOW`"
+check("Corollary 4 summary row is not the superseded form",
+      summary_stale not in spec_body)
+check("Corollary 4 summary row states the strengthened result",
+      "A violating trace never yields `ALLOW`, for every well-formed policy"
+      in spec_body)
+
 # --- Result ---------------------------------------------------------------------
 
 print()

@@ -527,15 +527,15 @@ for. An adversary able to do any of these is outside the threat model; a deploym
 cannot exclude them should not rely on pathname-based policies for the objects concerned.
 
 **Correlation-capacity exhaustion.** *Added in revision v1.3.* A1b establishes that a
-$	exttt{WRITE}(p)$ event exists only where the descriptor's opening was observed. An
+$\texttt{WRITE}(p)$ event exists only where the descriptor's opening was observed. An
 implementation maintains that association in a structure of finite capacity, written here as
 
 $$C = 	ext{the maximum number of simultaneously maintained write correlations.}$$
 
 An adversary able to cause more simultaneously tracked writable file associations than $C$
 can cause subsequent writes to become unresolved under A1b. Such writes do not generate
-$	exttt{WRITE}(p)$ events for any $p$, and therefore cannot advance any policy through its
-$	exttt{WRITE}$ transition.
+$\texttt{WRITE}(p)$ events for any $p$, and therefore cannot advance any policy through its
+$\texttt{WRITE}$ transition.
 
 It is important to state this precisely. These are **not** events that were generated and
 then lost in transport. Under A1b the event was never generated, because its argument could
@@ -545,7 +545,7 @@ assessed: a system reporting no loss may still have produced no event.
 Three requirements follow, and each binds the implementation:
 
 1. **$C$ is a declared security parameter, not a tuning parameter.** It determines how many
-   descriptors an adversary must hold to suppress $	exttt{WRITE}$ enforcement. Choosing it
+   descriptors an adversary must hold to suppress $\texttt{WRITE}$ enforcement. Choosing it
    is a threat-model decision and it must be documented as one.
 2. **Capacity pressure must not be resolved by eviction.** Evicting a correlation makes
    subsequent writes through that descriptor unresolved, which is the same condition reached
@@ -553,7 +553,7 @@ Three requirements follow, and each binds the implementation:
    evicts silently, such as an LRU map, unless this specification is first revised to say
    which writes are thereby placed outside $\Sigma$.
 3. **Correlation insertion failure must be observable.** Without it, a deployment cannot
-   distinguish a policy that is protecting from one whose $	exttt{WRITE}$ coverage has
+   distinguish a policy that is protecting from one whose $\texttt{WRITE}$ coverage has
    degraded. The two are different security states and must not be reported identically.
 
 The threshold is reachable by construction rather than only under extreme load: with a
@@ -675,7 +675,7 @@ $$Figl(D(P_1,	au),\dots,D(P_r,	au)igr)$$
 
 and an implementation must not choose it. The question is not which priority ordering to
 adopt; it is what object represents the collection of independent decisions, and how that
-object maps to a single verdict. A total order on $\{	exttt{DENY},	exttt{ALERT},	exttt{ALLOW}\}$
+object maps to a single verdict. A total order on $\{\texttt{DENY},\texttt{ALERT},\texttt{ALLOW}\}$
 would yield a verdict but discard the fact that several policies fired — which matters, since
 `DENY` and `ALERT` request different things and are not alternatives.
 
@@ -801,6 +801,6 @@ rather than by verification, and it should be described that way.
 | Corollary 2.1 | The executed decision equals $D(P,\tau)$ |
 | Theorem 3 | $q_n$ is absorbing |
 | Corollary 3.1 | Halting at $q_n$ is sound |
-| Corollary 4 | A violation of a `DENY`/`ALERT` policy never yields `ALLOW` |
+| Corollary 4 | A violating trace never yields `ALLOW`, for every well-formed policy |
 | Proposition 1 | Conditional completeness, under assumptions A1, A1b, A1c, A2–A5 only |
 | Proposition 2 | A pathname is not an object identifier, in either direction (empirical) |
