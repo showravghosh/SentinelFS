@@ -14,7 +14,8 @@ implicit that an implementation would otherwise have to decide for itself.
 | v1.1 | `v1.1-spec` | §1.4 event identity; assumption A1c; Proposition 2; the naming-evasion threat model in §7. Forced by measurement: different hooks report different strings for the same operation, and none names the object. See [`phase4c-findings.md`](phase4c-findings.md) |
 | v1.2 | `v1.2-spec` | two statements in §8: the host-wide trace of §1.2 permits a pattern to be satisfied across unrelated processes, and no reset or expiry construct exists. Both were already consequences of v1.1; each is a point at which an implementation could narrow or widen the semantics while appearing to implement them. See [`phase5a-state-analysis.md`](phase5a-state-analysis.md) |
 | v1.3 | `v1.3-spec` | §7 names correlation-capacity exhaustion as a threat, declares $C$ as a security parameter, forbids silent eviction, and requires insertion failure to be observable. A1b already implied the condition; v1.3 states the mechanism and what an implementation must do about it. See [`phase5a-e3-findings.md`](phase5a-e3-findings.md) |
-| v1.4 | this revision | §8 states MP1–MP3 for multi-policy evaluation, and records that the host verdict function $F$ over several policies' decisions is undefined. MP1–MP3 follow from existing semantics; $F$ is a genuine gap that blocks multi-policy enforcement. See [`phase5b-combination.md`](phase5b-combination.md) |
+| v1.4 | `v1.4-spec` | §8 states MP1–MP3 for multi-policy evaluation, and records that the host verdict function $F$ over several policies' decisions is undefined. MP1–MP3 follow from existing semantics; $F$ is a genuine gap that blocks multi-policy enforcement. See [`phase5b-combination.md`](phase5b-combination.md) |
+| v1.4 corrected | this revision | the v1.4 text stated that MP2 requires $F$ to be associative, commutative and idempotent. That was imprecise: only commutativity is required by order-independence, associativity is required for parallel reduction, and idempotence does not follow from MP2. The claim is corrected in place and the original is recorded here, per methodology rule M6 |
 
 This document defines the syntax, the trace semantics, the compilation function, and states
 and proves the determinism and compilation-correctness theorems. It is the normative
@@ -635,8 +636,27 @@ object maps to a single verdict. A total order on $\{	exttt{DENY},	exttt{ALERT},
 would yield a verdict but discard the fact that several policies fired — which matters, since
 `DENY` and `ALERT` request different things and are not alternatives.
 
-Any candidate $F$ must be consistent with MP2, which requires it to be associative,
-commutative and idempotent — a join, as the paragraph above anticipated.
+Any candidate $F$ must yield a verdict that does not depend on the order in which the
+policies were evaluated, which is the verdict-level counterpart of MP2. It is worth being
+precise about which algebraic property supplies what, because these do not all follow from
+MP2:
+
+| Property | What it provides |
+|---|---|
+| commutativity | removes dependence on the order in which policy decisions are combined |
+| associativity | makes grouping order-independent, so partial results may be reduced in parallel |
+| idempotence | permits a contribution to be merged or reprocessed without changing the result |
+
+Only the first is required by order-independence itself. Associativity is required if the
+combination is to be computed as a parallel or incremental reduction rather than a single
+left-to-right fold, which an implementation is likely to want. Idempotence does not follow
+from MP2 at all; it matters only if the same policy's decision may reach the combination more
+than once.
+
+A join-like operator satisfying all three would provide order-independent and safely
+composable aggregation, which is what §8's original paragraph anticipated by naming a lattice.
+**The precise algebra remains a specification decision**, and the properties above constrain
+it rather than determine it.
 
 **Until $F$ is defined, this specification does not describe multi-policy enforcement**, and
 no implementation can claim to provide it. Single-policy enforcement is unaffected. See

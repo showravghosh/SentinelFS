@@ -49,8 +49,18 @@ policy. Evaluating the policies in any order therefore yields the same set of re
 states.
 
 This is a useful property: it permits parallel evaluation and removes any need to define a
-policy ordering. A combination operator should preserve it, which means being **associative,
-commutative and idempotent** — that is, a join on a lattice, which is what §8 anticipated.
+policy ordering. A combination operator should preserve it at the verdict level too — but the
+algebraic requirements are narrower than they first appear, and are worth separating:
+
+| Property | What it provides | Required by order-independence? |
+|---|---|---|
+| commutativity | the verdict does not depend on the order decisions are combined | **yes** |
+| associativity | grouping is free, so partial results may be reduced in parallel | only if reduction is parallel or incremental |
+| idempotence | a contribution may be merged twice without changing the result | **no** — does not follow from §3.1 |
+
+A join on a lattice satisfies all three and is what §8 anticipated, but that is a sufficient
+choice rather than a necessary one. The algebra is a specification decision; these properties
+constrain it.
 
 ### 3.2 State updates may not be short-circuited
 
