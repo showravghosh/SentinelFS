@@ -1,6 +1,6 @@
 # SentinelFS: Formal Semantics of the Core Policy Language (v1)
 
-**Status:** working specification for the core language, at revision **v1.3**.
+**Status:** working specification for the core language, at revision **v1.4**.
 
 **Revision history.** No revision has changed the alphabet, the grammar, the compilation
 function, or any of Theorems 1–3, Lemma 1 or the corollaries. Those are statements about an
@@ -13,7 +13,8 @@ implicit that an implementation would otherwise have to decide for itself.
 | v1.0 | `v1.0-spec` | alphabet frozen after the Phase 2 study removed `SPAWN` |
 | v1.1 | `v1.1-spec` | §1.4 event identity; assumption A1c; Proposition 2; the naming-evasion threat model in §7. Forced by measurement: different hooks report different strings for the same operation, and none names the object. See [`phase4c-findings.md`](phase4c-findings.md) |
 | v1.2 | `v1.2-spec` | two statements in §8: the host-wide trace of §1.2 permits a pattern to be satisfied across unrelated processes, and no reset or expiry construct exists. Both were already consequences of v1.1; each is a point at which an implementation could narrow or widen the semantics while appearing to implement them. See [`phase5a-state-analysis.md`](phase5a-state-analysis.md) |
-| v1.3 | this revision | §7 names correlation-capacity exhaustion as a threat, declares $C$ as a security parameter, forbids silent eviction, and requires insertion failure to be observable. A1b already implied the condition; v1.3 states the mechanism and what an implementation must do about it. See [`phase5a-e3-findings.md`](phase5a-e3-findings.md) |
+| v1.3 | `v1.3-spec` | §7 names correlation-capacity exhaustion as a threat, declares $C$ as a security parameter, forbids silent eviction, and requires insertion failure to be observable. A1b already implied the condition; v1.3 states the mechanism and what an implementation must do about it. See [`phase5a-e3-findings.md`](phase5a-e3-findings.md) |
+| v1.4 | this revision | §8 states MP1–MP3 for multi-policy evaluation, and records that the host verdict function $F$ over several policies' decisions is undefined. MP1–MP3 follow from existing semantics; $F$ is a genuine gap that blocks multi-policy enforcement. See [`phase5b-combination.md`](phase5b-combination.md) |
 
 This document defines the syntax, the trace semantics, the compilation function, and states
 and proves the determinism and compilation-correctness theorems. It is the normative
@@ -593,6 +594,54 @@ is deterministic as well. Defining a combination operator on decisions — and w
 conflict analysis sketched in the project roadmap — requires a decision lattice and is
 deferred to a later version of this specification.
 
+### Multi-policy evaluation
+
+*Added in revision v1.4.* Independence has three consequences that follow from the existing
+semantics, and one gap that does not. The three are stated here because each is a point at
+which an implementation could deviate while appearing correct; the gap is stated because an
+enforcement hook cannot proceed without it.
+
+> **MP1 (Per-policy independence).** For each event $e$ and each active policy $P_i$ in state
+> $q_i$, the resulting state is $\delta_i(q_i, e)$. No transition depends on the state or the
+> decision of any other policy.
+
+> **MP2 (Order-freedom).** For any permutation $\pi$ of the active policies, evaluating them
+> in order $P_{\pi(1)},\dots,P_{\pi(r)}$ yields the same resulting states as evaluating them
+> in order $P_1,\dots,P_r$.
+
+MP2 follows from MP1: each automaton reads and writes only its own state, so there is no
+interaction for an ordering to affect. It is worth stating because it is a property an
+implementation must preserve: policy storage order, map iteration order, CPU scheduling and
+dispatcher structure must not change the resulting states.
+
+> **MP3 (State completeness).** Every active policy whose alphabet admits the event's type
+> receives that event and performs its transition, whatever verdict the deployed system
+> returns for the operation.
+
+MP3 forbids a specific and tempting optimisation. If a combination rule were such that one
+policy's decision already determined the verdict, an implementation might stop evaluating the
+remainder. The verdict for that operation would be correct and the system would still be
+wrong: a policy that did not receive the event has not advanced, so its state is incorrect for
+every subsequent event. **A verdict may be short-circuited; a transition may not.**
+
+**The gap.** With $r$ policies active there are $r$ decisions $D(P_1,	au),\dots,D(P_r,	au)$,
+and an enforcement mechanism returns one. The specification does not define
+
+$$Figl(D(P_1,	au),\dots,D(P_r,	au)igr)$$
+
+and an implementation must not choose it. The question is not which priority ordering to
+adopt; it is what object represents the collection of independent decisions, and how that
+object maps to a single verdict. A total order on $\{	exttt{DENY},	exttt{ALERT},	exttt{ALLOW}\}$
+would yield a verdict but discard the fact that several policies fired — which matters, since
+`DENY` and `ALERT` request different things and are not alternatives.
+
+Any candidate $F$ must be consistent with MP2, which requires it to be associative,
+commutative and idempotent — a join, as the paragraph above anticipated.
+
+**Until $F$ is defined, this specification does not describe multi-policy enforcement**, and
+no implementation can claim to provide it. Single-policy enforcement is unaffected. See
+[`phase5b-combination.md`](phase5b-combination.md).
+
 **Trace scope is the host, and patterns may match across processes.** *Added in revision
 v1.2.* The trace of §1.2 is host-wide. It follows that there is one automaton instance per
 policy, that events from any process advance it, and therefore that **a policy pattern may be
@@ -646,7 +695,7 @@ findings above. None is part of the language, and each would require its own rev
 | `TIMEOUT` | bounded temporal windows | moves the language beyond the regular fragment unless the bound is discretised into event counts; whether Theorem 2 generalises depends on the formulation |
 | pattern scoping | restrict a pattern to a process or a lineage | addresses the cross-process consequence above; requires a notion of process identity in the semantics, which §1.4 currently confines to evidence |
 | reset or expiry | return an instance to $q_0$ | changes which traces violate a policy; interacts with Theorem 3 |
-| decision combination | a lattice over the decisions of several policies | required before conflict analysis is meaningful |
+| decision combination ($F$) | a join over the decisions of several policies | **blocks multi-policy enforcement**, not only conflict analysis; see the multi-policy subsection above |
 
 ---
 
