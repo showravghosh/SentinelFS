@@ -9,6 +9,20 @@ security intent.
 **Status.** Formal development, not a decision. The choice among the candidates is about what
 the system is for, not about what Linux permits, and §6 states it as a question.
 
+**No theorem is affected.** Theorems 1–3, Lemma 1 and Corollaries 1.1, 2.1, 3.1 and 4 are
+statements about the automaton compiled from a *single* policy and its behaviour over
+$\Sigma^{*}$. Nothing here touches that construction. The questions below concern what a *set*
+of policies yields and what a deployed system returns, which sits above the automaton rather
+than inside it. This is a boundary in the language, not a correction to the correctness
+result.
+
+One consequence is worth stating precisely, because it is easy to read the wrong way.
+Corollary 4 — that a violating trace of a `DENY` or `ALERT` policy never yields `ALLOW` — is
+a per-policy statement and stands unchanged. Its multi-policy analogue, that a system refuses
+an operation when any active `DENY` policy is in violation, **cannot yet be stated**, because
+it quantifies over a verdict that is undefined. That analogue is among the things blocked
+here, and it is the property a deployment would actually rely on.
+
 ---
 
 ## 1. A prerequisite: the `ALLOW` action is currently inert
