@@ -1,6 +1,6 @@
 # SentinelFS: Formal Semantics of the Core Policy Language (v1)
 
-**Status:** working specification for the core language, at revision **v1.2**.
+**Status:** working specification for the core language, at revision **v1.3**.
 
 **Revision history.** No revision has changed the alphabet, the grammar, the compilation
 function, or any of Theorems 1–3, Lemma 1 or the corollaries. Those are statements about an
@@ -12,7 +12,8 @@ implicit that an implementation would otherwise have to decide for itself.
 |---|---|---|
 | v1.0 | `v1.0-spec` | alphabet frozen after the Phase 2 study removed `SPAWN` |
 | v1.1 | `v1.1-spec` | §1.4 event identity; assumption A1c; Proposition 2; the naming-evasion threat model in §7. Forced by measurement: different hooks report different strings for the same operation, and none names the object. See [`phase4c-findings.md`](phase4c-findings.md) |
-| v1.2 | this revision | two statements in §8: the host-wide trace of §1.2 permits a pattern to be satisfied across unrelated processes, and no reset or expiry construct exists. Both were already consequences of v1.1; each is a point at which an implementation could narrow or widen the semantics while appearing to implement them. See [`phase5a-state-analysis.md`](phase5a-state-analysis.md) |
+| v1.2 | `v1.2-spec` | two statements in §8: the host-wide trace of §1.2 permits a pattern to be satisfied across unrelated processes, and no reset or expiry construct exists. Both were already consequences of v1.1; each is a point at which an implementation could narrow or widen the semantics while appearing to implement them. See [`phase5a-state-analysis.md`](phase5a-state-analysis.md) |
+| v1.3 | this revision | §7 names correlation-capacity exhaustion as a threat, declares $C$ as a security parameter, forbids silent eviction, and requires insertion failure to be observable. A1b already implied the condition; v1.3 states the mechanism and what an implementation must do about it. See [`phase5a-e3-findings.md`](phase5a-e3-findings.md) |
 
 This document defines the syntax, the trace semantics, the compilation function, and states
 and proves the determinism and compilation-correctness theorems. It is the normative
@@ -501,6 +502,40 @@ Conversely, deleting a protected object and creating a different object under th
 pathname causes a policy to continue matching, now applying to an object it was not written
 for. An adversary able to do any of these is outside the threat model; a deployment that
 cannot exclude them should not rely on pathname-based policies for the objects concerned.
+
+**Correlation-capacity exhaustion.** *Added in revision v1.3.* A1b establishes that a
+$	exttt{WRITE}(p)$ event exists only where the descriptor's opening was observed. An
+implementation maintains that association in a structure of finite capacity, written here as
+
+$$C = 	ext{the maximum number of simultaneously maintained write correlations.}$$
+
+An adversary able to cause more simultaneously tracked writable file associations than $C$
+can cause subsequent writes to become unresolved under A1b. Such writes do not generate
+$	exttt{WRITE}(p)$ events for any $p$, and therefore cannot advance any policy through its
+$	exttt{WRITE}$ transition.
+
+It is important to state this precisely. These are **not** events that were generated and
+then lost in transport. Under A1b the event was never generated, because its argument could
+not be established. The distinction matters wherever event loss and evidence integrity are
+assessed: a system reporting no loss may still have produced no event.
+
+Three requirements follow, and each binds the implementation:
+
+1. **$C$ is a declared security parameter, not a tuning parameter.** It determines how many
+   descriptors an adversary must hold to suppress $	exttt{WRITE}$ enforcement. Choosing it
+   is a threat-model decision and it must be documented as one.
+2. **Capacity pressure must not be resolved by eviction.** Evicting a correlation makes
+   subsequent writes through that descriptor unresolved, which is the same condition reached
+   deliberately by an adversary. An implementation must therefore not use a structure that
+   evicts silently, such as an LRU map, unless this specification is first revised to say
+   which writes are thereby placed outside $\Sigma$.
+3. **Correlation insertion failure must be observable.** Without it, a deployment cannot
+   distinguish a policy that is protecting from one whose $	exttt{WRITE}$ coverage has
+   degraded. The two are different security states and must not be reported identically.
+
+The threshold is reachable by construction rather than only under extreme load: with a
+capacity of 64, holding 160 descriptors open produced exactly 96 unresolvable writes. See
+[`phase5a-e3-findings.md`](phase5a-e3-findings.md) §2.
 
 **Empirical status.** A1 and A2 are empirical claims about a deployment, not theorems. The
 Phase 2 feasibility study provides supporting evidence for both under the conditions it
