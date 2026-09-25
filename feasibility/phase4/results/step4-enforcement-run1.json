@@ -1,0 +1,205 @@
+{
+  "experiment": "phase5b0-step4-enforcement-capability",
+  "kernel": "7.1.5+kali-amd64",
+  "started": "2026-09-25T20:33:30+0530",
+  "claim_scope": "Pre-effect denial measured for the tested hooks, kernel, configurations and workloads. Not a universal claim about Linux, and not evidence for any trace model.",
+  "exec": {
+    "cases": {
+      "elf": {
+        "argv": [
+          "/tmp/sentinel-p7/exec/protected-elf"
+        ],
+        "returncode": -1,
+        "errno": 1,
+        "stderr": "PermissionError: [Errno 1] Operation not permitted: '/tmp/sentinel-p7/exec/protected-elf'",
+        "expected_denied": true,
+        "program_started": false,
+        "denied": true,
+        "started_despite_refusal": false,
+        "correct": true
+      },
+      "script": {
+        "argv": [
+          "/tmp/sentinel-p7/exec/protected-script"
+        ],
+        "returncode": -1,
+        "errno": 1,
+        "stderr": "PermissionError: [Errno 1] Operation not permitted: '/tmp/sentinel-p7/exec/protected-script'",
+        "expected_denied": true,
+        "program_started": false,
+        "denied": true,
+        "started_despite_refusal": false,
+        "correct": true
+      },
+      "symlink": {
+        "argv": [
+          "/tmp/sentinel-p7/exec/sneaky-link"
+        ],
+        "returncode": -1,
+        "errno": 1,
+        "stderr": "PermissionError: [Errno 1] Operation not permitted: '/tmp/sentinel-p7/exec/sneaky-link'",
+        "expected_denied": true,
+        "program_started": false,
+        "denied": true,
+        "started_despite_refusal": false,
+        "correct": true
+      },
+      "relative": {
+        "argv": [
+          "./protected-elf"
+        ],
+        "returncode": -1,
+        "errno": 1,
+        "stderr": "PermissionError: [Errno 1] Operation not permitted: './protected-elf'",
+        "expected_denied": true,
+        "program_started": false,
+        "denied": true,
+        "started_despite_refusal": false,
+        "correct": true
+      },
+      "control": {
+        "argv": [
+          "/tmp/sentinel-p7/exec/allowed-elf"
+        ],
+        "returncode": 0,
+        "errno": 0,
+        "stderr": "",
+        "expected_denied": false,
+        "program_started": true,
+        "denied": false,
+        "started_despite_refusal": false,
+        "correct": true
+      }
+    },
+    "counters": {
+      "0": 5,
+      "1": 5,
+      "2": 4,
+      "3": 4,
+      "4": 5,
+      "5": 0,
+      "6": 0,
+      "7": 0
+    },
+    "last_denied": "/tmp/sentinel-p7/exec/protected-elf",
+    "attached_programs": 1
+  },
+  "write": {
+    "cases": {
+      "protected": {
+        "errno": 1,
+        "bytes_unchanged": false,
+        "expected_denied": true,
+        "denied": false,
+        "correct": false,
+        "refused_after_effect": true
+      },
+      "allowed": {
+        "errno": 0,
+        "bytes_unchanged": false,
+        "expected_denied": false,
+        "denied": false,
+        "correct": true,
+        "refused_after_effect": false
+      }
+    },
+    "counters": {
+      "0": 6,
+      "1": 6,
+      "2": 21,
+      "3": 11,
+      "4": 2,
+      "5": 2,
+      "6": 0,
+      "7": 1,
+      "8": 1,
+      "9": 4,
+      "10": 0,
+      "11": 0,
+      "12": 0,
+      "13": 0,
+      "14": 0,
+      "15": 0
+    },
+    "last_denied": "/tmp/sentinel-p7/write/protected-file",
+    "attached_programs": 3
+  },
+  "delete": {
+    "cases": {
+      "unlink": {
+        "errno": 1,
+        "entry": "protected-unlink",
+        "expected_denied": true,
+        "entry_present_after": true,
+        "denied": true,
+        "removed_despite_refusal": false,
+        "correct": true
+      },
+      "rmdir": {
+        "errno": 1,
+        "entry": "protected-rmdir",
+        "expected_denied": true,
+        "entry_present_after": true,
+        "denied": true,
+        "removed_despite_refusal": false,
+        "correct": true
+      },
+      "rename_src": {
+        "errno": 1,
+        "entry": "protected-src",
+        "expected_denied": true,
+        "entry_present_after": true,
+        "denied": true,
+        "removed_despite_refusal": false,
+        "correct": true
+      },
+      "rename_over": {
+        "errno": 1,
+        "entry": "protected-dst",
+        "expected_denied": true,
+        "entry_present_after": true,
+        "denied": true,
+        "removed_despite_refusal": false,
+        "correct": true,
+        "dst_content_intact": true
+      },
+      "rename_exchange": {
+        "errno": 1,
+        "entry": "protected-dst",
+        "expected_denied": true,
+        "entry_present_after": true,
+        "denied": true,
+        "removed_despite_refusal": false,
+        "correct": true
+      },
+      "control_unlink": {
+        "errno": 0,
+        "entry": "allowed-unlink",
+        "expected_denied": false,
+        "entry_present_after": false,
+        "denied": false,
+        "correct": true
+      }
+    },
+    "counters": {
+      "0": 2,
+      "1": 1,
+      "2": 3,
+      "3": 1,
+      "4": 1,
+      "5": 1,
+      "6": 2,
+      "7": 1,
+      "8": 6,
+      "9": 0,
+      "10": 0,
+      "11": 0,
+      "12": 0,
+      "13": 0,
+      "14": 0,
+      "15": 0
+    },
+    "last_denied": "protected-dst",
+    "attached_programs": 3
+  }
+}
