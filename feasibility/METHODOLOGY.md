@@ -100,6 +100,42 @@ retraction each changed a conclusion; each is recorded in place.
 
 ---
 
+## M7 — Claims made *from* this record must be calibrated
+
+**Rule.** The development history may be cited for what it contains: that specific semantic
+gaps were identified at specific points, and that the implementation had not yet committed to
+a resolution when each was found. It may not be cited as evidence that formal specification is
+effective in general, that this methodology works, or that the gaps would not have been found
+another way.
+
+**Why.** The record supports a factual claim and not a comparative one. No control exists: the
+project was not also built implementation-first, so there is no observation of what such a
+process would have produced. A gap found before implementation might have been found during
+it, or after deployment, or never — and this record cannot distinguish those.
+
+The defensible formulation is therefore:
+
+> The development history shows that the formal specification exposed several semantic gaps
+> before the implementation committed to resolving them.
+
+and not:
+
+> The formal specification prevented the implementation from making these mistakes.
+
+The second attributes a counterfactual the record does not contain.
+
+The gaps themselves are stated in the findings documents and each is independently checkable:
+`SPAWN` was not faithfully observable ([`../docs/phase2-findings.md`](../docs/phase2-findings.md) §4.1);
+a pathname is not an object identifier ([`../docs/phase4c-findings.md`](../docs/phase4c-findings.md) §1);
+trace scope, reset and correlation capacity affect what a policy means
+([`../docs/phase5a-state-analysis.md`](../docs/phase5a-state-analysis.md),
+[`../docs/phase5a-e3-findings.md`](../docs/phase5a-e3-findings.md));
+and the host verdict over several policies was never defined
+([`../docs/phase5b0f-decision-domain.md`](../docs/phase5b0f-decision-domain.md)). Each of those
+is a claim about the artefact. The efficacy of the method that surfaced them is not.
+
+---
+
 ## Applying these rules
 
 An experiment in this directory should be able to answer, before its results are believed:
@@ -110,3 +146,4 @@ An experiment in this directory should be able to answer, before its results are
 4. Can setup activity for any case generate events attributed to another? (M4)
 5. For any "no event observed" claim, were the mechanisms that could produce it instrumented?
    (M5)
+6. Does any claim made *about* this record assert more than the record contains? (M7)
